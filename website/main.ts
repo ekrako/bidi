@@ -2,9 +2,6 @@
 
 type Lang = "en" | "he";
 
-/**
- * Initializes the language toggle button, applying the saved language preference or defaulting to English.
- */
 function initLanguageToggle() {
   const toggle = document.getElementById("langToggle") as HTMLButtonElement;
   if (!toggle) return;
@@ -25,10 +22,6 @@ function initLanguageToggle() {
   });
 }
 
-/**
- * Applies the specified language to the document, updating direction, translatable elements, and the page title.
- * @param lang - The language to apply ('en' or 'he').
- */
 function applyLanguage(lang: Lang) {
   const html = document.documentElement;
 
@@ -41,11 +34,7 @@ function applyLanguage(lang: Lang) {
   for (const el of translatables) {
     const text = el.getAttribute(`data-${lang}`);
     if (text !== null) {
-      if (el.hasAttribute("data-html")) {
-        el.innerHTML = text;
-      } else if (el.children.length === 0) {
-        el.textContent = text;
-      }
+      el.textContent = text;
     }
   }
 
@@ -62,9 +51,6 @@ function applyLanguage(lang: Lang) {
   }
 }
 
-/**
- * Initializes the scroll reveal animations for sections and grid elements.
- */
 function initScrollReveal() {
   const revealElements = document.querySelectorAll<HTMLElement>(
     ".demo, .features, .modes, .install, .cta-section"
@@ -105,9 +91,6 @@ function initScrollReveal() {
   }
 }
 
-/**
- * Initializes smooth scrolling for all internal anchor links.
- */
 function initSmoothAnchors() {
   const anchors = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]');
   for (const anchor of anchors) {
@@ -126,27 +109,22 @@ function initSmoothAnchors() {
 
 type Theme = "light" | "dark";
 
-/**
- * Detects the system color scheme preference.
- * @returns The preferred theme ('light' or 'dark').
- */
 function getSystemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-/**
- * Initializes the theme toggle button, applying the saved theme preference or defaulting to the system theme.
- */
 function initThemeToggle() {
   const toggle = document.getElementById("themeToggle") as HTMLButtonElement;
   if (!toggle) return;
 
-  const saved = (localStorage.getItem("bidi-theme") as Theme | null) || getSystemTheme();
-  document.documentElement.setAttribute("data-theme", saved);
+  const saved = localStorage.getItem("bidi-theme") as Theme | null;
+  if (saved) {
+    document.documentElement.setAttribute("data-theme", saved);
+  }
 
   toggle.addEventListener("click", () => {
     const current =
-      document.documentElement.getAttribute("data-theme") as Theme;
+      document.documentElement.getAttribute("data-theme") || getSystemTheme();
     const next: Theme = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("bidi-theme", next);

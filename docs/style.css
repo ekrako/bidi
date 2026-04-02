@@ -64,10 +64,7 @@
 }
 
 /* Light-mode specific overrides */
-:root[data-theme="light"] .bg-grid {
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-}
-
+:root[data-theme="light"] .bg-grid,
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) .bg-grid {
     background-image: radial-gradient(circle, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
@@ -390,13 +387,8 @@ code {
   border-radius: 100px;
   padding: 0;
   cursor: pointer;
-  transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.lang-toggle:focus-visible {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-glow);
+  transition: border-color 0.3s;
 }
 
 .lang-toggle:hover {
@@ -532,7 +524,7 @@ code {
   border-radius: 100px;
   margin-bottom: 32px;
   background: var(--color-primary-glow);
-  animation: fade-slide-up 0.6s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s var(--ease-out) both;
 }
 
 .hero__title {
@@ -554,16 +546,16 @@ html[lang="he"] .hero__title {
 
 .hero__line--1 {
   color: var(--color-text);
-  animation: fade-slide-up 0.6s 0.1s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s 0.1s var(--ease-out) both;
 }
 
 .hero__line--2 {
-  animation: fade-slide-up 0.6s 0.2s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s 0.2s var(--ease-out) both;
 }
 
 .hero__line--3 {
   color: var(--color-text-muted);
-  animation: fade-slide-up 0.6s 0.3s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s 0.3s var(--ease-out) both;
 }
 
 .hero__gradient {
@@ -579,7 +571,7 @@ html[lang="he"] .hero__title {
   max-width: 560px;
   margin: 0 auto 40px;
   line-height: 1.7;
-  animation: fade-slide-up 0.6s 0.4s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s 0.4s var(--ease-out) both;
 }
 
 .hero__actions {
@@ -587,14 +579,14 @@ html[lang="he"] .hero__title {
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
-  animation: fade-slide-up 0.6s 0.5s var(--ease-out) both;
+  animation: fadeSlideUp 0.6s 0.5s var(--ease-out) both;
 }
 
 /* --- Hero Visual (Browser mockup) --- */
 .hero__visual {
   margin-top: 64px;
   perspective: 1200px;
-  animation: fade-slide-up 0.8s 0.6s var(--ease-out) both;
+  animation: fadeSlideUp 0.8s 0.6s var(--ease-out) both;
 }
 
 .browser-frame {
@@ -1211,7 +1203,7 @@ html[lang="he"] .cta-section__inner h2 {
 }
 
 /* --- Animations --- */
-@keyframes fade-slide-up {
+@keyframes fadeSlideUp {
   from {
     opacity: 0;
     transform: translateY(24px);
@@ -1306,7 +1298,7 @@ html[dir="rtl"] .demo__panel--after .demo__content {
 }
 
 .policy ul {
-  padding-inline-start: 20px;
+  padding-left: 20px;
   margin-bottom: 16px;
 }
 
