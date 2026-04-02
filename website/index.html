@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BiDi — Smart RTL for the Modern Web</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="icon" type="image/png" href="icons/logo-32.png" />
+  </head>
+  <body>
+    <header>
+      <nav class="container">
+        <div class="logo">
+          <img src="icons/logo-32.png" alt="BiDi Logo" />
+          <span>BiDi</span>
+        </div>
+        <div class="links">
+          <a href="#features">Features</a>
+          <a href="#install">Install</a>
+          <a href="https://github.com/erankor/bidi" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero container">
+        <h1>Smart RTL for the Modern Web</h1>
+        <p class="subtitle">
+          Toggle RTL/LTR text direction on any website with per-site persistence. 
+          Perfect for Hebrew and Arabic users.
+        </p>
+        <div class="cta">
+          <a href="#install" class="btn primary">Install Extension</a>
+          <a href="https://github.com/erankor/bidi" class="btn secondary">View Source</a>
+        </div>
+      </section>
+
+      <section id="features" class="features container">
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="icon">🔍</div>
+            <h3>Smart Auto Mode</h3>
+            <p>
+              Automatically detects RTL characters (Hebrew, Arabic, etc.) and 
+              applies direction only to elements containing RTL text.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">💾</div>
+            <h3>Per-Site Persistence</h3>
+            <p>
+              Your settings are saved per-hostname and synced across all your 
+              Chrome instances using <code>chrome.storage.sync</code>.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">🚀</div>
+            <h3>Fast & Lightweight</h3>
+            <p>
+              Zero-dependency extension built with performance in mind. No 
+              slowdown to your browsing experience.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="modes" class="modes container">
+        <h2>Flexible Control</h2>
+        <div class="mode-options">
+          <div class="mode-option">
+            <strong>None</strong>
+            <span>Standard browser behavior.</span>
+          </div>
+          <div class="mode-option">
+            <strong>RTL</strong>
+            <span>Force RTL on the entire page.</span>
+          </div>
+          <div class="mode-option">
+            <strong>Auto</strong>
+            <span>Smart detection of RTL content.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="install" class="install container">
+        <h2>How to Install</h2>
+        <p>BiDi is currently in development. You can load it as a developer extension:</p>
+        <ol>
+          <li>Clone the <a href="https://github.com/erankor/bidi">repository</a>.</li>
+          <li>Run <code>bun install</code> and <code>bun run build</code>.</li>
+          <li>Go to <code>chrome://extensions/</code> in Chrome.</li>
+          <li>Enable <strong>Developer mode</strong>.</li>
+          <li>Click <strong>Load unpacked</strong> and select the <code>dist/</code> folder.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <p class="container">
+        &copy; 2026 Eran Krakovsky. Released under the <a href="https://github.com/erankor/bidi/blob/main/LICENSE">MIT License</a>.
+      </p>
+    </footer>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

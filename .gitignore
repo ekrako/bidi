@@ -35,6 +35,3 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # PRDs
 prds/
-
-# Website Source
-website/
