@@ -34,7 +34,11 @@ function applyLanguage(lang: Lang) {
   for (const el of translatables) {
     const text = el.getAttribute(`data-${lang}`);
     if (text !== null) {
-      el.textContent = text;
+      if (el.hasAttribute("data-html")) {
+        el.innerHTML = text;
+      } else if (el.children.length === 0) {
+        el.textContent = text;
+      }
     }
   }
 
@@ -117,14 +121,12 @@ function initThemeToggle() {
   const toggle = document.getElementById("themeToggle") as HTMLButtonElement;
   if (!toggle) return;
 
-  const saved = localStorage.getItem("bidi-theme") as Theme | null;
-  if (saved) {
-    document.documentElement.setAttribute("data-theme", saved);
-  }
+  const saved = (localStorage.getItem("bidi-theme") as Theme | null) || getSystemTheme();
+  document.documentElement.setAttribute("data-theme", saved);
 
   toggle.addEventListener("click", () => {
     const current =
-      document.documentElement.getAttribute("data-theme") || getSystemTheme();
+      document.documentElement.getAttribute("data-theme") as Theme;
     const next: Theme = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("bidi-theme", next);
