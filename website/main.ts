@@ -2,6 +2,9 @@
 
 type Lang = "en" | "he";
 
+/**
+ * Initializes the language toggle button, applying the saved language preference or defaulting to English.
+ */
 function initLanguageToggle() {
   const toggle = document.getElementById("langToggle") as HTMLButtonElement;
   if (!toggle) return;
@@ -22,6 +25,10 @@ function initLanguageToggle() {
   });
 }
 
+/**
+ * Applies the specified language to the document, updating direction, translatable elements, and the page title.
+ * @param lang - The language to apply ('en' or 'he').
+ */
 function applyLanguage(lang: Lang) {
   const html = document.documentElement;
 
@@ -55,6 +62,9 @@ function applyLanguage(lang: Lang) {
   }
 }
 
+/**
+ * Initializes the scroll reveal animations for sections and grid elements.
+ */
 function initScrollReveal() {
   const revealElements = document.querySelectorAll<HTMLElement>(
     ".demo, .features, .modes, .install, .cta-section"
@@ -95,6 +105,9 @@ function initScrollReveal() {
   }
 }
 
+/**
+ * Initializes smooth scrolling for all internal anchor links.
+ */
 function initSmoothAnchors() {
   const anchors = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]');
   for (const anchor of anchors) {
@@ -113,10 +126,17 @@ function initSmoothAnchors() {
 
 type Theme = "light" | "dark";
 
+/**
+ * Detects the system color scheme preference.
+ * @returns The preferred theme ('light' or 'dark').
+ */
 function getSystemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
+/**
+ * Initializes the theme toggle button, applying the saved theme preference or defaulting to the system theme.
+ */
 function initThemeToggle() {
   const toggle = document.getElementById("themeToggle") as HTMLButtonElement;
   if (!toggle) return;
