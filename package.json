@@ -1,0 +1,19 @@
+{
+  "name": "BiDi",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "Eran Krakovsky",
+  "scripts": {
+    "build": "bun build.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/chrome": "^0.1.38"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

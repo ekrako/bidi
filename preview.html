@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>BiDi — Icon Preview</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #1a1a1a;
+        color: #ccc;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px;
+        gap: 40px;
+      }
+      h1 { color: #fff; margin: 0; }
+      .row {
+        display: flex;
+        gap: 32px;
+        align-items: flex-end;
+      }
+      .preview {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .preview canvas {
+        border: 1px solid #333;
+        image-rendering: pixelated;
+      }
+      .label { font-size: 12px; color: #888; }
+      .size-label { font-size: 14px; color: #aaa; font-weight: 600; margin-bottom: 8px; }
+      .section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      /* Zoomed previews */
+      .zoomed canvas {
+        border: 1px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BiDi — Badge Preview</h1>
+    <div id="root"></div>
+    <script>
+      const BADGE_BG = "#8B0000";
+      const BADGE_FG = "#FFFFFF";
+      const MODES = [null, "RTL", "AUT"];
+      const BADGE_COLORS = { RTL: "#8B0000", AUT: "#006400" };
+      const SIZES = [16, 32];
+      const ZOOM = 8;
+
+      const imgs = {};
+      let loaded = 0;
+      for (const [size, src] of [[16, "icons/logo-16.png"], [32, "icons/logo-32.png"]]) {
+        const im = new Image();
+        im.src = src;
+        im.onload = () => { loaded++; if (loaded === 2) render(); };
+        imgs[size] = im;
+      }
+
+      function renderIcon(size, label) {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        ctx.imageSmoothingEnabled = false;
+        const srcImg = imgs[size] || imgs[32];
+        ctx.drawImage(srcImg, 0, 0, size, size);
+
+        if (label) {
+          const badgeH = Math.round(size * 0.625);
+          const badgeY = size - badgeH;
+          const radius = Math.round(8 * (size / 32));
+
+          ctx.fillStyle = BADGE_COLORS[label] || BADGE_BG;
+          ctx.beginPath();
+          ctx.roundRect(0, badgeY, size, badgeH, [radius, radius, 0, 0]);
+          ctx.fill();
+
+          const fontSize = Math.round(13 * (size / 32));
+          ctx.font = `bold ${fontSize}px sans-serif`;
+          ctx.fillStyle = BADGE_FG;
+          ctx.textBaseline = "middle";
+          ctx.textAlign = "center";
+          ctx.fillText(label, size / 2, badgeY + badgeH / 2);
+        }
+
+        // Threshold alpha
+        const imageData = ctx.getImageData(0, 0, size, size);
+        const data = imageData.data;
+        for (let i = 3; i < data.length; i += 4) {
+          data[i] = data[i] > 127 ? 255 : 0;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        return canvas;
+      }
+
+      function zoomCanvas(src, zoom) {
+        const canvas = document.createElement("canvas");
+        canvas.width = src.width * zoom;
+        canvas.height = src.height * zoom;
+        canvas.style.width = `${src.width * zoom}px`;
+        canvas.style.height = `${src.height * zoom}px`;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+        return canvas;
+      }
+
+      function render() {
+        const root = document.getElementById("root");
+
+        for (const size of SIZES) {
+          const section = document.createElement("div");
+          section.className = "section";
+
+          const sizeLabel = document.createElement("div");
+          sizeLabel.className = "size-label";
+          sizeLabel.textContent = `${size}x${size}`;
+          section.appendChild(sizeLabel);
+
+          const row = document.createElement("div");
+          row.className = "row";
+
+          for (const mode of MODES) {
+            const preview = document.createElement("div");
+            preview.className = "preview";
+
+            // Actual size
+            const icon = renderIcon(size, mode);
+            preview.appendChild(icon);
+
+            const actualLabel = document.createElement("div");
+            actualLabel.className = "label";
+            actualLabel.textContent = `${mode || "OFF"} (1x)`;
+            preview.appendChild(actualLabel);
+
+            // Zoomed
+            const zoomed = zoomCanvas(icon, ZOOM);
+            preview.appendChild(zoomed);
+
+            const zoomLabel = document.createElement("div");
+            zoomLabel.className = "label";
+            zoomLabel.textContent = `${mode || "OFF"} (${ZOOM}x)`;
+            preview.appendChild(zoomLabel);
+
+            row.appendChild(preview);
+          }
+
+          section.appendChild(row);
+          root.appendChild(section);
+        }
+      }
+    </script>
+  </body>
+</html>
