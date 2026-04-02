@@ -31,6 +31,7 @@ await Bun.build({
 
 await cp("website/index.html", "docs/index.html");
 await cp("website/style.css", "docs/style.css");
+await cp("website/google8f710ed7675febd3.html", "docs/google8f710ed7675febd3.html");
 await cp("icons", "docs/icons", { recursive: true });
 
 console.log("Website build complete → docs/");
