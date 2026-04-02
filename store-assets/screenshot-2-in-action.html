@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 1280px;
+      height: 800px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f0f0;
+    }
+
+    /* Chrome frame */
+    .chrome-bar {
+      background: #dee1e6;
+      padding: 8px 16px 0;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .traffic-lights { display: flex; gap: 5px; margin-right: 8px; }
+    .tl { width: 13px; height: 13px; border-radius: 50%; }
+    .tl.r { background: #ff5f57; }
+    .tl.y { background: #febc2e; }
+    .tl.g { background: #28c840; }
+    .tab {
+      background: white;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 16px;
+      font-size: 12px;
+      color: #333;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .tab-fav { width: 14px; height: 14px; background: #4a90d9; border-radius: 2px; }
+
+    .toolbar {
+      background: #f8f8f8;
+      border-bottom: 1px solid #ddd;
+      padding: 6px 16px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; color: #666;
+    }
+    .addr {
+      flex: 1;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 5px 16px;
+      font-size: 12px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lock { font-size: 11px; color: #5e8a3e; }
+    .ext-wrap { position: relative; margin-left: 4px; }
+    .ext-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: rgba(74,144,217,0.12);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ext-btn img { width: 18px; height: 18px; }
+    .badge {
+      position: absolute; bottom: 2px; right: 0;
+      background: #4a90d9; color: white;
+      font-size: 7px; font-weight: 700;
+      padding: 1px 3px; border-radius: 3px; line-height: 1;
+    }
+
+    /* Two-column layout */
+    .page {
+      display: flex;
+      height: calc(800px - 44px - 42px);
+      background: white;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: #1a1a2e;
+      color: white;
+      padding: 16px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .sidebar-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .conv-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+    .conv-item.active {
+      background: rgba(74,144,217,0.3);
+      color: white;
+    }
+    .conv-item:hover:not(.active) { background: rgba(255,255,255,0.07); }
+
+    /* Main chat area */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      border-bottom: 1px solid #eee;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #222;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Message bubbles */
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      max-width: 780px;
+    }
+    .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+    .avatar.bot { background: #4a90d9; color: white; }
+    .avatar.user { background: #e8f0fe; color: #4a90d9; }
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 640px;
+    }
+    .bubble.bot {
+      background: #f7f7f8;
+      color: #222;
+      border-radius: 2px 14px 14px 14px;
+    }
+    .bubble.user {
+      background: #4a90d9;
+      color: white;
+      border-radius: 14px 2px 14px 14px;
+    }
+    /* BiDi applied — RTL */
+    .bubble.rtl {
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* Input bar */
+    .chat-input {
+      border-top: 1px solid #eee;
+      padding: 14px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .input-field {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 24px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: #999;
+    }
+    .send-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #4a90d9;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 16px;
+    }
+
+    /* Popup overlay */
+    .popup-overlay {
+      position: absolute;
+      top: 44px + 42px;
+      right: 10px;
+      top: 96px;
+    }
+    .popup-arrow-up {
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 8px solid #ccc;
+      margin: 0 auto;
+      position: relative;
+      right: -85px;
+    }
+    .popup-arrow-inner {
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 7px solid white;
+      position: absolute;
+      top: 2px;
+      left: -6px;
+    }
+    .popup {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      width: 220px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+      font-size: 13px;
+    }
+    .popup-site {
+      color: #555; font-size: 12px; margin-bottom: 10px;
+    }
+    .popup-site strong { color: #111; font-weight: 600; }
+    .popup-btns { display: flex; gap: 6px; margin-bottom: 10px; }
+    .pbtn {
+      flex: 1; padding: 6px 0;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 600;
+      text-align: center;
+      border: 1px solid #ccc;
+      color: #555; background: white;
+    }
+    .pbtn.active { background: #4a90d9; color: white; border-color: #4a90d9; }
+    .popup-footer {
+      border-top: 1px solid #eee;
+      padding-top: 8px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #555;
+    }
+
+    /* Highlight overlay */
+    .bidi-indicator {
+      position: absolute;
+      top: 96px;
+      right: 238px;
+      background: rgba(74,144,217,0.1);
+      border: 1.5px solid #4a90d9;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #4a90d9;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <!-- Chrome frame -->
+  <div class="chrome-bar">
+    <div class="traffic-lights">
+      <div class="tl r"></div><div class="tl y"></div><div class="tl g"></div>
+    </div>
+    <div class="tab">
+      <div class="tab-fav"></div>
+      Claude — AI Assistant
+    </div>
+  </div>
+  <div class="toolbar">
+    <div class="nav-btn">←</div>
+    <div class="nav-btn">→</div>
+    <div class="nav-btn">↻</div>
+    <div class="addr">
+      <span class="lock">🔒</span>
+      claude.ai
+    </div>
+    <div class="ext-wrap">
+      <div class="ext-btn"><img src="../icons/logo-32.png" alt="BiDi"></div>
+      <div class="badge">AUT</div>
+    </div>
+  </div>
+
+  <!-- Page -->
+  <div class="page">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">Conversations</div>
+      <div class="conv-item active">עזרה עם קוד Python</div>
+      <div class="conv-item">New conversation</div>
+      <div class="conv-item">Yesterday's chat</div>
+    </div>
+
+    <!-- Main chat -->
+    <div class="chat-main">
+      <div class="chat-header">עזרה עם קוד Python</div>
+      <div class="chat-messages">
+
+        <div class="msg-row user">
+          <div class="avatar user">E</div>
+          <div class="bubble user rtl">
+            שלום! אני צריך עזרה עם קוד Python שלי.<br>
+            יש לי בעיה עם לולאה שלא עובדת כמו שצריך.
+          </div>
+        </div>
+
+        <div class="msg-row">
+          <div class="avatar bot">C</div>
+          <div class="bubble bot rtl">
+            שלום! אשמח לעזור. תוכל לשתף איתי את הקוד<br>
+            ולתאר מה הבעיה שאתה רואה?
+          </div>
+        </div>
+
+        <div class="msg-row user">
+          <div class="avatar user">E</div>
+          <div class="bubble user rtl">
+            תודה רבה! הנה הקוד שלי — הלולאה מדלגת על<br>
+            האלמנט האחרון ואני לא מבין למה.
+          </div>
+        </div>
+
+        <div class="msg-row">
+          <div class="avatar bot">C</div>
+          <div class="bubble bot rtl">
+            ראיתי את הבעיה! אתה משתמש ב-<code>range(len(arr) - 1)</code><br>
+            במקום <code>range(len(arr))</code>. זה גורם ללולאה<br>
+            להפסיק לפני האלמנט האחרון.
+          </div>
+        </div>
+
+      </div>
+      <div class="chat-input">
+        <div class="input-field">הקלד הודעה...</div>
+        <div class="send-btn">↑</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BiDi popup overlay -->
+  <div class="popup-overlay">
+    <div class="popup-arrow-up"><div class="popup-arrow-inner"></div></div>
+    <div class="popup">
+      <div class="popup-site">Site: <strong>claude.ai</strong></div>
+      <div class="popup-btns">
+        <div class="pbtn">NONE</div>
+        <div class="pbtn active">AUTO</div>
+        <div class="pbtn">FULL RTL</div>
+      </div>
+      <div class="popup-footer">
+        <input type="checkbox" checked />
+        <label>Auto by default</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="bidi-indicator">BiDi: Auto mode active</div>
+</body>
+</html>
