@@ -1,0 +1,55 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create a GitHub Release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build the extension
+        run: bun run build
+
+      - name: Package extension (Zip)
+        run: |
+          cd dist
+          zip -r ../bidi-release.zip ./*
+          cd ..
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bidi-extension-zip
+          path: bidi-release.zip
+
+      - name: Extract Version from Manifest
+        id: extract_version
+        run: |
+          VERSION=$(jq -r .version manifest.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}-build.${{ github.run_number }}
+          name: BiDi v${{ env.VERSION }} (Build ${{ github.run_number }})
+          files: bidi-release.zip
+          prerelease: ${{ github.ref != 'refs/heads/main' }}
+          generate_release_notes: true
