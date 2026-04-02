@@ -1,6 +1,14 @@
 // BiDi Website — Language toggle, scroll reveals, smooth interactions
 
 type Lang = "en" | "he";
+const SUPPORTED_LANGS: Lang[] = ["en", "he"];
+
+/**
+ * Validates and returns a supported language.
+ */
+function validateLang(lang: string | null): Lang {
+  return SUPPORTED_LANGS.includes(lang as Lang) ? (lang as Lang) : "en";
+}
 
 /**
  * Initializes the language toggle button, applying the saved language preference or defaulting to English.
@@ -9,20 +17,22 @@ function initLanguageToggle() {
   const toggle = document.getElementById("langToggle") as HTMLButtonElement;
   if (!toggle) return;
 
-  let currentLang: Lang = (localStorage.getItem("bidi-lang") as Lang) || "en";
+  const rawLang = localStorage.getItem("bidi-lang");
+  let currentLang: Lang = validateLang(rawLang);
 
   // Apply saved language on load
   if (currentLang !== "en") {
     applyLanguage(currentLang);
   }
   toggle.setAttribute("data-active", currentLang);
+  toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
 
   toggle.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
     const option = target.closest(".lang-toggle__option") as HTMLElement;
 
     if (option) {
-      const selectedLang = option.getAttribute("data-lang") as Lang;
+      const selectedLang = validateLang(option.getAttribute("data-lang"));
       if (selectedLang === currentLang) return;
       currentLang = selectedLang;
     } else {
@@ -33,6 +43,7 @@ function initLanguageToggle() {
     localStorage.setItem("bidi-lang", currentLang);
     applyLanguage(currentLang);
     toggle.setAttribute("data-active", currentLang);
+    toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
   });
 }
 
@@ -57,15 +68,24 @@ function applyLanguage(lang: Lang) {
     }
   }
 
-  // Update all translatable elements
-  const translatables = document.querySelectorAll<HTMLElement>("[data-en][data-he]");
+  // Update all translatable elements (content and attributes)
+  const translatables = document.querySelectorAll<HTMLElement>("[data-en], [data-he]");
   for (const el of translatables) {
+    // 1. Handle content
     const text = el.getAttribute(`data-${lang}`);
     if (text !== null) {
       if (el.hasAttribute("data-html")) {
         el.innerHTML = text;
       } else if (el.children.length === 0) {
         el.textContent = text;
+      }
+    }
+
+    // 2. Handle attributes (e.g., data-he-aria-label -> aria-label)
+    for (const attr of el.attributes) {
+      if (attr.name.startsWith(`data-${lang}-`)) {
+        const targetAttr = attr.name.slice(`data-${lang}-`.length);
+        el.setAttribute(targetAttr, attr.value);
       }
     }
   }
@@ -131,6 +151,8 @@ function initScrollReveal() {
  */
 function initSmoothAnchors() {
   const anchors = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]');
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
   for (const anchor of anchors) {
     anchor.addEventListener("click", (e) => {
       const href = anchor.getAttribute("href");
@@ -140,12 +162,23 @@ function initSmoothAnchors() {
       if (!target) return;
 
       e.preventDefault();
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.scrollIntoView({
+        behavior: prefersReducedMotion.matches ? "auto" : "smooth",
+        block: "start"
+      });
     });
   }
 }
 
 type Theme = "light" | "dark";
+const SUPPORTED_THEMES: Theme[] = ["light", "dark"];
+
+/**
+ * Validates and returns a supported theme.
+ */
+function validateTheme(theme: string | null): Theme {
+  return SUPPORTED_THEMES.includes(theme as Theme) ? (theme as Theme) : getSystemTheme();
+}
 
 /**
  * Detects the system color scheme preference.
@@ -162,15 +195,18 @@ function initThemeToggle() {
   const toggle = document.getElementById("themeToggle") as HTMLButtonElement;
   if (!toggle) return;
 
-  const saved = (localStorage.getItem("bidi-theme") as Theme | null) || getSystemTheme();
+  const rawTheme = localStorage.getItem("bidi-theme");
+  const saved = validateTheme(rawTheme);
   document.documentElement.setAttribute("data-theme", saved);
+  toggle.setAttribute("aria-pressed", saved === "dark" ? "true" : "false");
 
   toggle.addEventListener("click", () => {
     const current =
-      document.documentElement.getAttribute("data-theme") as Theme;
+      (document.documentElement.getAttribute("data-theme") as Theme) || getSystemTheme();
     const next: Theme = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("bidi-theme", next);
+    toggle.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
   });
 }
 
