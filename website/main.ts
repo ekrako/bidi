@@ -17,8 +17,19 @@ function initLanguageToggle() {
   }
   toggle.setAttribute("data-active", currentLang);
 
-  toggle.addEventListener("click", () => {
-    currentLang = currentLang === "en" ? "he" : "en";
+  toggle.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const option = target.closest(".lang-toggle__option") as HTMLElement;
+
+    if (option) {
+      const selectedLang = option.getAttribute("data-lang") as Lang;
+      if (selectedLang === currentLang) return;
+      currentLang = selectedLang;
+    } else {
+      // Toggle if clicked on the track or thumb
+      currentLang = currentLang === "en" ? "he" : "en";
+    }
+
     localStorage.setItem("bidi-lang", currentLang);
     applyLanguage(currentLang);
     toggle.setAttribute("data-active", currentLang);
@@ -35,6 +46,16 @@ function applyLanguage(lang: Lang) {
   // Set document direction and language
   html.setAttribute("lang", lang);
   html.setAttribute("dir", lang === "he" ? "rtl" : "ltr");
+
+  // Update language toggle visual state
+  const options = document.querySelectorAll(".lang-toggle__option");
+  for (const opt of options) {
+    if (opt.getAttribute("data-lang") === lang) {
+      opt.classList.add("lang-toggle__option--active");
+    } else {
+      opt.classList.remove("lang-toggle__option--active");
+    }
+  }
 
   // Update all translatable elements
   const translatables = document.querySelectorAll<HTMLElement>("[data-en][data-he]");

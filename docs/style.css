@@ -423,10 +423,12 @@ code {
   transition: color 0.3s;
   user-select: none;
   line-height: 30px;
+  cursor: pointer;
 }
 
 .lang-toggle__option--active {
   color: var(--color-text);
+  cursor: default;
 }
 
 .lang-toggle__thumb {
