@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — BiDi</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="icon" type="image/png" href="icons/logo-32.png" />
+    <style>
+      .policy {
+        max-width: 720px;
+        padding: 60px 24px;
+      }
+      .policy h1 { margin-bottom: 8px; }
+      .policy .updated { color: var(--muted); font-size: 0.9rem; margin-bottom: 40px; }
+      .policy h2 { margin-top: 40px; margin-bottom: 12px; font-size: 1.2rem; }
+      .policy p { margin-bottom: 16px; }
+      .policy ul { padding-left: 20px; margin-bottom: 16px; }
+      .policy li { margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="container">
+        <div class="logo">
+          <img src="icons/logo-32.png" alt="BiDi Logo" />
+          <span>BiDi</span>
+        </div>
+        <div class="links">
+          <a href="/">Home</a>
+          <a href="https://github.com/ekrako/bidi" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <div class="policy container">
+        <h1>Privacy Policy</h1>
+        <p class="updated">Effective date: April 2, 2026</p>
+
+        <h2>Overview</h2>
+        <p>
+          BiDi is a browser extension that fixes text direction (RTL/LTR) on websites for users of
+          Hebrew, Arabic, Persian, and other right-to-left languages. This policy describes what
+          data BiDi accesses, how it is used, and your rights.
+        </p>
+        <p>
+          <strong>Short version: BiDi does not collect, transmit, or sell any personal data.</strong>
+          It stores only your text-direction preferences, locally in your browser.
+        </p>
+
+        <h2>Data Collected</h2>
+        <p>BiDi stores one thing: your per-site direction mode preference (None, Auto, or Full RTL).</p>
+        <ul>
+          <li><strong>What is stored:</strong> A mapping of website hostnames to a mode value (e.g., <code>{"chat.openai.com": "auto"}</code>).</li>
+          <li><strong>Where it is stored:</strong> In Chrome's built-in <code>chrome.storage.sync</code> API. This syncs across your Chrome instances via your Google account, under Google's privacy policy.</li>
+          <li><strong>What is NOT stored:</strong> Page content, browsing history, text you type, personally identifiable information of any kind.</li>
+        </ul>
+
+        <h2>Data Transmission</h2>
+        <p>
+          BiDi does not contact any external servers. It does not send any data to the extension
+          developer or any third party. No analytics, no telemetry, no crash reporting.
+        </p>
+        <p>
+          The only network activity is the Chrome sync of your settings, which is handled entirely
+          by Chrome and Google — not by BiDi.
+        </p>
+
+        <h2>Permissions Used</h2>
+        <ul>
+          <li><strong>storage</strong> — Read and write your per-site direction settings.</li>
+          <li><strong>activeTab / tabs</strong> — Read the hostname of the current tab to display the correct setting in the popup. No tab content is accessed.</li>
+          <li><strong>scripting</strong> — Inject the CSS direction rules into the page. Only direction-related styles are applied; no page content is read or transmitted.</li>
+          <li><strong>All URLs (&lt;all_urls&gt;)</strong> — Required to apply direction settings on any website. The extension only reads the hostname, never the full page content.</li>
+        </ul>
+
+        <h2>Third-Party Services</h2>
+        <p>BiDi uses no third-party services, SDKs, or analytics tools.</p>
+
+        <h2>Children's Privacy</h2>
+        <p>BiDi does not collect any data from any user, including children.</p>
+
+        <h2>Changes to This Policy</h2>
+        <p>
+          If this policy changes, the updated version will be posted at this URL with a new
+          effective date. Material changes will also be noted in the extension's version release
+          notes on the Chrome Web Store.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions or concerns about this policy can be raised via the project's issue tracker:
+          <a href="https://github.com/ekrako/bidi/issues" target="_blank" rel="noopener noreferrer">
+            github.com/ekrako/bidi/issues
+          </a>
+        </p>
+      </div>
+    </main>
+
+    <footer>
+      <p class="container">
+        &copy; 2026 Eran Krakovsky. Released under the
+        <a href="https://github.com/ekrako/bidi/blob/main/LICENSE">MIT License</a>.
+        &nbsp;|&nbsp;
+        <a href="/bidi/privacy.html">Privacy Policy</a>
+      </p>
+    </footer>
+  </body>
+</html>

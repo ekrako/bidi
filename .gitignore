@@ -35,3 +35,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # PRDs
 prds/
+
+# Generated store assets (run `bun store-assets/capture.ts` to regenerate)
+store-assets/output/
