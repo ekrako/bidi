@@ -38,3 +38,6 @@ prds/
 
 # Generated store assets (run `bun store-assets/capture.ts` to regenerate)
 store-assets/output/
+
+# Claude setting
+.claude/settings.local.json

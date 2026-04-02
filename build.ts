@@ -29,7 +29,11 @@ await Bun.build({
   minify: true,
 });
 
-await cp("website/index.html", "docs/index.html");
+// Copy HTML files, rewriting .ts script references to .js for production
+for (const htmlFile of ["index.html", "privacy.html"]) {
+  const html = await Bun.file(`website/${htmlFile}`).text();
+  await Bun.write(`docs/${htmlFile}`, html.replace('./main.ts', './main.js'));
+}
 await cp("website/style.css", "docs/style.css");
 await cp("website/google8f710ed7675febd3.html", "docs/google8f710ed7675febd3.html");
 await cp("icons", "docs/icons", { recursive: true });

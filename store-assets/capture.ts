@@ -28,11 +28,11 @@ const assets = [
     label: "Small promotional tile (440×280)",
   },
   {
-    file: "promo-1280x800.html",
-    width: 1280,
-    height: 800,
+    file: "promo-1400x560.html",
+    width: 1400,
+    height: 560,
     output: "promo-large.png",
-    label: "Large promotional tile (1280×800)",
+    label: "Large promotional tile (1400×560)",
   },
   {
     file: "screenshot-1-popup.html",
