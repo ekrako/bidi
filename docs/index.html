@@ -1,105 +1,259 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BiDi — Smart RTL for the Modern Web</title>
+    <meta name="description" content="Fix RTL text for Hebrew, Arabic & Persian on any website. Smart auto-detection with per-site settings synced across devices." />
     <link rel="stylesheet" href="./style.css" />
     <link rel="icon" type="image/png" href="icons/logo-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body>
-    <header>
-      <nav class="container">
-        <div class="logo">
-          <img src="icons/logo-32.png" alt="BiDi Logo" />
+  <body data-page-title-en="BiDi — Smart RTL for the Modern Web" data-page-title-he="BiDi — RTL חכם לרשת המודרנית">
+    <!-- Ambient background -->
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--1" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+
+    <!-- Navigation -->
+    <header class="nav-header">
+      <nav class="nav container">
+        <a href="#" class="nav__logo">
+          <img src="icons/logo-32.png" alt="BiDi" width="28" height="28" />
           <span>BiDi</span>
-        </div>
-        <div class="links">
-          <a href="#features">Features</a>
-          <a href="#install">Install</a>
+        </a>
+        <div class="nav__links">
+          <a href="#features" data-en="Features" data-he="תכונות">Features</a>
+          <a href="#demo" data-en="Demo" data-he="הדגמה">Demo</a>
+          <a href="#install" data-en="Install" data-he="התקנה">Install</a>
           <a href="https://github.com/ekrako/bidi" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+        <div class="nav__actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+          <svg class="theme-toggle__icon theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="theme-toggle__icon theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="lang-toggle" id="langToggle" type="button" aria-label="Toggle language">
+          <span class="lang-toggle__track">
+            <span class="lang-toggle__option" data-lang="he">עב</span>
+            <span class="lang-toggle__option lang-toggle__option--active" data-lang="en">EN</span>
+            <span class="lang-toggle__thumb"></span>
+          </span>
+        </button>
         </div>
       </nav>
     </header>
 
     <main>
-      <section class="hero container">
-        <h1>Smart RTL for the Modern Web</h1>
-        <p class="subtitle">
-          Toggle RTL/LTR text direction on any website with per-site persistence. 
-          Perfect for Hebrew and Arabic users.
-        </p>
-        <div class="cta">
-          <a href="#install" class="btn primary">Install Extension</a>
-          <a href="https://github.com/ekrako/bidi" class="btn secondary">View Source</a>
-        </div>
-      </section>
-
-      <section id="features" class="features container">
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="icon">🔍</div>
-            <h3>Smart Auto Mode</h3>
-            <p>
-              Automatically detects RTL characters (Hebrew, Arabic, etc.) and 
-              applies direction only to elements containing RTL text.
-            </p>
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container hero__inner">
+          <div class="hero__badge" data-en="Chrome Extension" data-he="תוסף לכרום">Chrome Extension</div>
+          <h1 class="hero__title">
+            <span class="hero__line hero__line--1" data-en="Fix every" data-he="עברית בכיוון">Fix every</span>
+            <span class="hero__line hero__line--2">
+              <span class="hero__gradient" data-en="RTL moment" data-he="הנכון">RTL moment</span>
+            </span>
+            <span class="hero__line hero__line--3" data-en="on the web." data-he="בכל אתר.">on the web.</span>
+          </h1>
+          <p class="hero__sub" data-en="Smart text direction for Hebrew, Arabic &amp; Persian. Auto-detects RTL content, remembers your preferences per site, and syncs across all your devices." data-he="כיוון טקסט חכם לעברית, ערבית ופרסית. מזהה אוטומטית תוכן RTL, זוכר את ההעדפות שלך לכל אתר, ומסנכרן בין כל המכשירים שלך.">Smart text direction for Hebrew, Arabic &amp; Persian. Auto-detects RTL content, remembers your preferences per site, and syncs across all your devices.</p>
+          <div class="hero__actions">
+            <a href="#install" class="btn btn--primary">
+              <svg class="btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <span data-en="Add to Chrome — It's Free" data-he="הוסף לכרום — בחינם">Add to Chrome — It's Free</span>
+            </a>
+            <a href="https://github.com/ekrako/bidi" class="btn btn--ghost" target="_blank" rel="noopener noreferrer">
+              <svg class="btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              <span data-en="View Source" data-he="צפה בקוד">View Source</span>
+            </a>
           </div>
-          <div class="feature-card">
-            <div class="icon">💾</div>
-            <h3>Per-Site Persistence</h3>
-            <p>
-              Your settings are saved per-hostname and synced across all your 
-              Chrome instances using <code>chrome.storage.sync</code>.
-            </p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">🚀</div>
-            <h3>Fast & Lightweight</h3>
-            <p>
-              Zero-dependency extension built with performance in mind. No 
-              slowdown to your browsing experience.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="modes" class="modes container">
-        <h2>Flexible Control</h2>
-        <div class="mode-options">
-          <div class="mode-option">
-            <strong>None</strong>
-            <span>Standard browser behavior.</span>
-          </div>
-          <div class="mode-option">
-            <strong>RTL</strong>
-            <span>Force RTL on the entire page.</span>
-          </div>
-          <div class="mode-option">
-            <strong>Auto</strong>
-            <span>Smart detection of RTL content.</span>
+          <!-- Floating browser mockup -->
+          <div class="hero__visual">
+            <div class="browser-frame">
+              <div class="browser-frame__bar">
+                <span class="browser-frame__dot"></span>
+                <span class="browser-frame__dot"></span>
+                <span class="browser-frame__dot"></span>
+                <div class="browser-frame__url">claude.ai</div>
+                <div class="browser-frame__ext">
+                  <img src="icons/logo-16.png" alt="" width="16" height="16" />
+                  <span class="browser-frame__badge">AUT</span>
+                </div>
+              </div>
+              <div class="browser-frame__content">
+                <div class="chat-demo">
+                  <div class="chat-demo__msg chat-demo__msg--user" dir="rtl">
+                    <p>שלום, אני צריך עזרה עם הפרויקט שלי. אתה יכול להסביר לי איך לממש אימות משתמשים?</p>
+                  </div>
+                  <div class="chat-demo__msg chat-demo__msg--ai" dir="rtl">
+                    <p>בטח! הנה הגישה המומלצת לאימות משתמשים:</p>
+                    <p>1. השתמש ב-JWT לניהול טוקנים<br/>2. אחסן סיסמאות עם bcrypt<br/>3. הוסף middleware לאימות בכל בקשה</p>
+                  </div>
+                  <div class="chat-demo__indicator">
+                    <span class="chat-demo__bidi-badge">BiDi: Auto</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="install" class="install container">
-        <h2>How to Install</h2>
-        <p>BiDi is currently in development. You can load it as a developer extension:</p>
-        <ol>
-          <li>Clone the <a href="https://github.com/ekrako/bidi">repository</a>.</li>
-          <li>Run <code>bun install</code> and <code>bun run build</code>.</li>
-          <li>Go to <code>chrome://extensions/</code> in Chrome.</li>
-          <li>Enable <strong>Developer mode</strong>.</li>
-          <li>Click <strong>Load unpacked</strong> and select the <code>dist/</code> folder.</li>
-        </ol>
+      <!-- Before / After Demo -->
+      <section id="demo" class="demo">
+        <div class="container">
+          <h2 class="section-title" data-en="See the difference" data-he="ראו את ההבדל">See the difference</h2>
+          <p class="section-sub" data-en="Hebrew text on most websites is broken. BiDi fixes it instantly." data-he="טקסט בעברית ברוב האתרים שבור. BiDi מתקן את זה מיד.">Hebrew text on most websites is broken. BiDi fixes it instantly.</p>
+          <div class="demo__panels">
+            <div class="demo__panel demo__panel--before">
+              <div class="demo__label demo__label--bad" data-en="Without BiDi" data-he="בלי BiDi">Without BiDi</div>
+              <div class="demo__content" dir="ltr">
+                <div class="demo__line"><span class="demo__text-broken">שלום עולם! אני כותב בעברית באתר שלא תומך בכיוון טקסט מימין לשמאל. הטקסט נראה הפוך ומבלבל.</span></div>
+                <div class="demo__line"><span class="demo__text-broken">זהו דוגמה לבעיה שמשתמשי עברית, ערבית ופרסית חווים כל יום.</span></div>
+                <div class="demo__annotation" data-en="Text starts from the wrong side" data-he="הטקסט מתחיל מהצד הלא נכון">Text starts from the wrong side</div>
+              </div>
+            </div>
+            <div class="demo__divider">
+              <div class="demo__divider-line"></div>
+              <span class="demo__divider-label">+ BiDi</span>
+              <div class="demo__divider-line"></div>
+            </div>
+            <div class="demo__panel demo__panel--after">
+              <div class="demo__label demo__label--good" data-en="With BiDi" data-he="עם BiDi">With BiDi</div>
+              <div class="demo__content" dir="rtl">
+                <div class="demo__line"><span class="demo__text-fixed">שלום עולם! אני כותב בעברית באתר שלא תומך בכיוון טקסט מימין לשמאל. הטקסט נראה הפוך ומבלבל.</span></div>
+                <div class="demo__line"><span class="demo__text-fixed">זהו דוגמה לבעיה שמשתמשי עברית, ערבית ופרסית חווים כל יום.</span></div>
+                <div class="demo__annotation demo__annotation--good" data-en="Correct right-to-left flow" data-he="זרימה נכונה מימין לשמאל">Correct right-to-left flow</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="features">
+        <div class="container">
+          <h2 class="section-title" data-en="Built for real-world RTL" data-he="נבנה עבור RTL בעולם האמיתי">Built for real-world RTL</h2>
+          <p class="section-sub" data-en="Three powerful capabilities that just work." data-he="שלוש יכולות חזקות שפשוט עובדות.">Three powerful capabilities that just work.</p>
+          <div class="features__grid">
+            <div class="feature-card">
+              <div class="feature-card__icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+              </div>
+              <h3 data-en="Smart Auto Mode" data-he="מצב אוטומטי חכם">Smart Auto Mode</h3>
+              <p data-en="Detects Hebrew, Arabic, and Persian characters in real-time. Only applies RTL direction to elements that actually contain RTL text — leaving everything else untouched." data-he="מזהה תווים בעברית, ערבית ופרסית בזמן אמת. מחיל כיוון RTL רק על אלמנטים שמכילים טקסט RTL — ומשאיר את כל השאר כפי שהוא.">Detects Hebrew, Arabic, and Persian characters in real-time. Only applies RTL direction to elements that actually contain RTL text — leaving everything else untouched.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+              </div>
+              <h3 data-en="Per-Site Persistence" data-he="שמירה לפי אתר">Per-Site Persistence</h3>
+              <p data-en="Set it once, forget it forever. Your preferred mode is saved per website and synced across all your Chrome instances via cloud storage." data-he="הגדר פעם אחת, שכח לעד. המצב המועדף שלך נשמר לכל אתר ומסונכרן בין כל מופעי הכרום שלך דרך אחסון ענן.">Set it once, forget it forever. Your preferred mode is saved per website and synced across all your Chrome instances via cloud storage.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <h3 data-en="Zero Overhead" data-he="אפס עומס">Zero Overhead</h3>
+              <p data-en="No dependencies. No performance hit. Built with pure browser APIs and a MutationObserver that activates only when needed. Your pages stay fast." data-he="בלי תלויות. בלי פגיעה בביצועים. בנוי עם ממשקי דפדפן טהורים ו-MutationObserver שמופעל רק כשצריך. הדפים שלך נשארים מהירים.">No dependencies. No performance hit. Built with pure browser APIs and a MutationObserver that activates only when needed. Your pages stay fast.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Modes -->
+      <section class="modes">
+        <div class="container">
+          <h2 class="section-title" data-en="Three modes, total control" data-he="שלושה מצבים, שליטה מלאה">Three modes, total control</h2>
+          <p class="section-sub" data-en="Choose how BiDi handles each website." data-he="בחר איך BiDi מטפל בכל אתר.">Choose how BiDi handles each website.</p>
+          <div class="modes__grid">
+            <div class="mode-card">
+              <div class="mode-card__header">
+                <div class="mode-card__badge">NONE</div>
+              </div>
+              <h3 data-en="Off" data-he="כבוי">Off</h3>
+              <p data-en="Standard browser behavior. BiDi won't touch the page." data-he="התנהגות דפדפן רגילה. BiDi לא ייגע בדף.">Standard browser behavior. BiDi won't touch the page.</p>
+            </div>
+            <div class="mode-card mode-card--highlight">
+              <div class="mode-card__header">
+                <div class="mode-card__badge mode-card__badge--auto">AUTO</div>
+                <span class="mode-card__recommended" data-en="Recommended" data-he="מומלץ">Recommended</span>
+              </div>
+              <h3 data-en="Auto Detect" data-he="זיהוי אוטומטי">Auto Detect</h3>
+              <p data-en="Scans each element for RTL characters and applies direction only where needed. Handles mixed content perfectly." data-he="סורק כל אלמנט לתווי RTL ומחיל כיוון רק היכן שצריך. מטפל בתוכן מעורב בצורה מושלמת.">Scans each element for RTL characters and applies direction only where needed. Handles mixed content perfectly.</p>
+            </div>
+            <div class="mode-card">
+              <div class="mode-card__header">
+                <div class="mode-card__badge mode-card__badge--rtl">RTL</div>
+              </div>
+              <h3 data-en="Full RTL" data-he="RTL מלא">Full RTL</h3>
+              <p data-en="Forces right-to-left on the entire page. Best for sites that are fully in Hebrew, Arabic, or Persian." data-he="מכריח מימין-לשמאל על כל הדף. הכי מתאים לאתרים שכולם בעברית, ערבית או פרסית.">Forces right-to-left on the entire page. Best for sites that are fully in Hebrew, Arabic, or Persian.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Install -->
+      <section id="install" class="install">
+        <div class="container">
+          <h2 class="section-title" data-en="Get started in 30 seconds" data-he="התחל תוך 30 שניות">Get started in 30 seconds</h2>
+          <p class="section-sub" data-en="Available as a developer extension while we await Chrome Web Store approval." data-he="זמין כתוסף מפתח בזמן שאנחנו ממתינים לאישור חנות כרום.">Available as a developer extension while we await Chrome Web Store approval.</p>
+          <div class="install__steps">
+            <div class="install__step">
+              <div class="install__number">1</div>
+              <div class="install__detail">
+                <h4 data-en="Clone the repository" data-he="שכפל את המאגר">Clone the repository</h4>
+                <code>git clone https://github.com/ekrako/bidi.git</code>
+              </div>
+            </div>
+            <div class="install__step">
+              <div class="install__number">2</div>
+              <div class="install__detail">
+                <h4 data-en="Build the extension" data-he="בנה את התוסף">Build the extension</h4>
+                <code>bun install && bun run build</code>
+              </div>
+            </div>
+            <div class="install__step">
+              <div class="install__number">3</div>
+              <div class="install__detail">
+                <h4 data-en="Load in Chrome" data-he="טען בכרום">Load in Chrome</h4>
+                <p data-en="Go to chrome://extensions, enable Developer Mode, click &quot;Load unpacked&quot; and select the dist/ folder." data-he="עבור ל-chrome://extensions, הפעל מצב מפתח, לחץ על &quot;טען ללא אריזה&quot; ובחר את תיקיית dist/.">Go to chrome://extensions, enable Developer Mode, click "Load unpacked" and select the dist/ folder.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="cta-section">
+        <div class="container cta-section__inner">
+          <h2 data-en="Stop fighting with text direction." data-he="תפסיק להילחם עם כיוון טקסט.">Stop fighting with text direction.</h2>
+          <p data-en="BiDi is free, open-source, and built by someone who actually uses Hebrew daily." data-he="BiDi הוא חינמי, קוד פתוח, ונבנה על ידי מישהו שבאמת משתמש בעברית כל יום.">BiDi is free, open-source, and built by someone who actually uses Hebrew daily.</p>
+          <a href="#install" class="btn btn--primary btn--lg">
+            <span data-en="Install BiDi Now" data-he="התקן את BiDi עכשיו">Install BiDi Now</span>
+          </a>
+        </div>
       </section>
     </main>
 
-    <footer>
-      <p class="container">
-        &copy; 2026 Eran Krakovsky. Released under the <a href="https://github.com/ekrako/bidi/blob/main/LICENSE">MIT License</a>.
-      </p>
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">
+          <img src="icons/logo-32.png" alt="BiDi" width="24" height="24" />
+          <span>BiDi</span>
+        </div>
+        <div class="footer__links">
+          <a href="https://github.com/ekrako/bidi" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="privacy.html" data-en="Privacy" data-he="פרטיות">Privacy</a>
+          <a href="https://github.com/ekrako/bidi/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-en="MIT License" data-he="רישיון MIT">MIT License</a>
+        </div>
+        <p class="footer__copy">&copy; 2026 Eran Krakovsky</p>
+      </div>
     </footer>
-    <script type="module" src="./main.ts"></script>
+
+    <script type="module" src="./main.js"></script>
   </body>
 </html>
