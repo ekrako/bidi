@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: true
 
 jobs:
   build-and-release:
@@ -51,5 +56,5 @@ jobs:
           tag_name: v${{ env.VERSION }}-build.${{ github.run_number }}
           name: BiDi v${{ env.VERSION }} (Build ${{ github.run_number }})
           files: bidi-release.zip
-          prerelease: ${{ github.ref != 'refs/heads/main' }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || github.ref != 'refs/heads/main' }}
           generate_release_notes: true
