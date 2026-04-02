@@ -829,6 +829,16 @@ html[lang="he"] .section-title {
   color: var(--color-text);
 }
 
+.demo__text-en {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  direction: ltr;
+  text-align: left;
+  display: block;
+}
+
 .demo__annotation {
   margin-top: 16px;
   font-size: 0.82rem;
