@@ -6,14 +6,14 @@ const SUPPORTED_LANGS: Lang[] = ["en", "he"];
 /**
  * Validates and returns a supported language.
  */
-function validateLang(lang: string | null): Lang {
+export function validateLang(lang: string | null): Lang {
   return SUPPORTED_LANGS.includes(lang as Lang) ? (lang as Lang) : "en";
 }
 
 /**
  * Initializes the language toggle button, applying the saved language preference or defaulting to English.
  */
-function initLanguageToggle() {
+export function initLanguageToggle() {
   const toggle = document.getElementById("langToggle") as HTMLButtonElement;
   if (!toggle) return;
 
@@ -51,7 +51,7 @@ function initLanguageToggle() {
  * Applies the specified language to the document, updating direction, translatable elements, and the page title.
  * @param lang - The language to apply ('en' or 'he').
  */
-function applyLanguage(lang: Lang) {
+export function applyLanguage(lang: Lang) {
   const html = document.documentElement;
 
   // Set document direction and language
@@ -176,7 +176,7 @@ const SUPPORTED_THEMES: Theme[] = ["light", "dark"];
 /**
  * Validates and returns a supported theme.
  */
-function validateTheme(theme: string | null): Theme {
+export function validateTheme(theme: string | null): Theme {
   return SUPPORTED_THEMES.includes(theme as Theme) ? (theme as Theme) : getSystemTheme();
 }
 
@@ -191,7 +191,7 @@ function getSystemTheme(): Theme {
 /**
  * Initializes the theme toggle button, applying the saved theme preference or defaulting to the system theme.
  */
-function initThemeToggle() {
+export function initThemeToggle() {
   const toggle = document.getElementById("themeToggle") as HTMLButtonElement;
   if (!toggle) return;
 
