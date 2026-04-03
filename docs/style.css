@@ -531,6 +531,13 @@ code {
   font-size: 1.05rem;
 }
 
+.btn--sm {
+  padding: 8px 16px;
+  gap: 8px;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+}
+
 /* --- Hero --- */
 .hero {
   position: relative;
