@@ -1146,6 +1146,18 @@ html[dir="rtl"] .install__steps::before {
   margin-top: 4px;
 }
 
+.install__detail a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.install__detail a:hover {
+  opacity: 0.8;
+}
+
 /* --- CTA Section --- */
 .cta-section {
   position: relative;
