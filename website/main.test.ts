@@ -55,7 +55,7 @@ describe("Website Logic", () => {
         dispatchEvent: () => true,
       } as any);
 
-      expect(["light", "dark"]).toContain(validateTheme(null));
+      expect(validateTheme(null)).toBe("light");
     });
 
     test("returns 'dark' for 'dark'", () => {
