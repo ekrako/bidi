@@ -9,6 +9,7 @@ await Bun.build({
   ],
   outdir: "dist",
   target: "browser",
+  format: "iife",
   minify: false,
 });
 
