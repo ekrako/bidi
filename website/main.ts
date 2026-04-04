@@ -1,7 +1,6 @@
 // BiDi Website — Language toggle, scroll reveals, smooth interactions
 
-type Lang = "en" | "he";
-const SUPPORTED_LANGS: Lang[] = ["en", "he"];
+import { type Lang, SUPPORTED_LANGS, t } from "./i18n/index";
 
 /**
  * Validates and returns a supported language.
@@ -25,7 +24,6 @@ export function initLanguageToggle() {
     applyLanguage(currentLang);
   }
   toggle.setAttribute("data-active", currentLang);
-  toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
 
   toggle.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -36,27 +34,26 @@ export function initLanguageToggle() {
       if (selectedLang === currentLang) return;
       currentLang = selectedLang;
     } else {
-      // Toggle if clicked on the track or thumb
-      currentLang = currentLang === "en" ? "he" : "en";
+      // Cycle through languages: en → ar → he → en
+      const langIndex = SUPPORTED_LANGS.indexOf(currentLang);
+      currentLang = SUPPORTED_LANGS[(langIndex + 1) % SUPPORTED_LANGS.length]!;
     }
 
     localStorage.setItem("bidi-lang", currentLang);
     applyLanguage(currentLang);
     toggle.setAttribute("data-active", currentLang);
-    toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
   });
 }
 
 /**
  * Applies the specified language to the document, updating direction, translatable elements, and the page title.
- * @param lang - The language to apply ('en' or 'he').
  */
 export function applyLanguage(lang: Lang) {
   const html = document.documentElement;
 
   // Set document direction and language
   html.setAttribute("lang", lang);
-  html.setAttribute("dir", lang === "he" ? "rtl" : "ltr");
+  html.setAttribute("dir", lang === "en" ? "ltr" : "rtl");
 
   // Update language toggle visual state
   const options = document.querySelectorAll(".lang-toggle__option");
@@ -68,39 +65,37 @@ export function applyLanguage(lang: Lang) {
     }
   }
 
-  // Update all translatable elements (content and attributes)
-  const translatables = document.querySelectorAll<HTMLElement>("[data-en], [data-he]");
+  // Update all translatable elements
+  const translatables = document.querySelectorAll<HTMLElement>(
+    "[data-i18n], [data-i18n-aria-label]",
+  );
   for (const el of translatables) {
-    // 1. Handle content
-    const text = el.getAttribute(`data-${lang}`);
-    if (text !== null) {
-      if (el.hasAttribute("data-html")) {
-        el.innerHTML = text;
+    // Handle text content
+    const key = el.getAttribute("data-i18n");
+    if (key) {
+      const value = t(lang, key);
+      if (key.endsWith("$html")) {
+        // SECURITY: innerHTML is safe because translations are bundled at build
+        // time via t(lang, key) — never user input. Any translations using the
+        // "$html" suffix must be reviewed by maintainers to avoid XSS.
+        el.innerHTML = value;
       } else if (el.children.length === 0) {
-        el.textContent = text;
+        el.textContent = value;
       }
     }
 
-    // 2. Handle attributes (e.g., data-he-aria-label -> aria-label)
+    // Handle attribute translations (data-i18n-{attr} → {attr})
     for (const attr of el.attributes) {
-      if (attr.name.startsWith(`data-${lang}-`)) {
-        const targetAttr = attr.name.slice(`data-${lang}-`.length);
-        el.setAttribute(targetAttr, attr.value);
+      if (attr.name.startsWith("data-i18n-") && attr.name !== "data-i18n") {
+        const targetAttr = attr.name.slice("data-i18n-".length);
+        el.setAttribute(targetAttr, t(lang, attr.value));
       }
     }
   }
 
-  // Update page title (use body data attributes if present, otherwise default)
-  const titleEn = document.body.getAttribute("data-page-title-en");
-  const titleHe = document.body.getAttribute("data-page-title-he");
-  if (titleEn && titleHe) {
-    document.title = lang === "he" ? titleHe : titleEn;
-  } else {
-    document.title =
-      lang === "he"
-        ? "BiDi — RTL חכם לרשת המודרנית"
-        : "BiDi — Smart RTL for the Modern Web";
-  }
+  // Update page title
+  const titleKey = document.body.dataset.i18nTitle;
+  document.title = t(lang, titleKey || "index.meta.pageTitle");
 }
 
 /**
@@ -108,7 +103,7 @@ export function applyLanguage(lang: Lang) {
  */
 function initScrollReveal() {
   const revealElements = document.querySelectorAll<HTMLElement>(
-    ".demo, .features, .modes, .install, .cta-section"
+    ".demo, .features, .modes, .install, .cta-section",
   );
 
   // Add reveal class to sections
@@ -118,7 +113,7 @@ function initScrollReveal() {
 
   // Add stagger class to grids
   const staggerGrids = document.querySelectorAll<HTMLElement>(
-    ".features__grid, .modes__grid, .install__steps"
+    ".features__grid, .modes__grid, .install__steps",
   );
   for (const grid of staggerGrids) {
     grid.classList.add("reveal-stagger");
@@ -138,7 +133,7 @@ function initScrollReveal() {
         }
       }
     },
-    { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+    { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
   );
 
   for (const el of revealElements) {
@@ -151,7 +146,9 @@ function initScrollReveal() {
  */
 function initSmoothAnchors() {
   const anchors = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]');
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  );
 
   for (const anchor of anchors) {
     anchor.addEventListener("click", (e) => {
@@ -164,7 +161,7 @@ function initSmoothAnchors() {
       e.preventDefault();
       target.scrollIntoView({
         behavior: prefersReducedMotion.matches ? "auto" : "smooth",
-        block: "start"
+        block: "start",
       });
     });
   }
@@ -177,7 +174,9 @@ const SUPPORTED_THEMES: Theme[] = ["light", "dark"];
  * Validates and returns a supported theme.
  */
 export function validateTheme(theme: string | null): Theme {
-  return SUPPORTED_THEMES.includes(theme as Theme) ? (theme as Theme) : getSystemTheme();
+  return SUPPORTED_THEMES.includes(theme as Theme)
+    ? (theme as Theme)
+    : getSystemTheme();
 }
 
 /**
@@ -185,7 +184,9 @@ export function validateTheme(theme: string | null): Theme {
  * @returns The preferred theme ('light' or 'dark').
  */
 function getSystemTheme(): Theme {
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 /**
@@ -202,7 +203,8 @@ export function initThemeToggle() {
 
   toggle.addEventListener("click", () => {
     const current =
-      (document.documentElement.getAttribute("data-theme") as Theme) || getSystemTheme();
+      (document.documentElement.getAttribute("data-theme") as Theme) ||
+      getSystemTheme();
     const next: Theme = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("bidi-theme", next);
@@ -210,10 +212,34 @@ export function initThemeToggle() {
   });
 }
 
-// Boot
-document.addEventListener("DOMContentLoaded", () => {
-  initThemeToggle();
-  initLanguageToggle();
-  initScrollReveal();
-  initSmoothAnchors();
-});
+/**
+ * Initializes all site features in sequence, handling errors gracefully.
+ */
+function boot() {
+  try {
+    initThemeToggle();
+  } catch (e) {
+    console.error("initThemeToggle failed", e);
+  }
+  try {
+    initLanguageToggle();
+  } catch (e) {
+    console.error("initLanguageToggle failed", e);
+  }
+  try {
+    initScrollReveal();
+  } catch (e) {
+    console.error("initScrollReveal failed", e);
+  }
+  try {
+    initSmoothAnchors();
+  } catch (e) {
+    console.error("initSmoothAnchors failed", e);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}

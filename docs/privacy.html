@@ -8,9 +8,9 @@
     <link rel="icon" type="image/png" href="icons/logo-32.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body data-page-title-en="Privacy Policy — BiDi" data-page-title-he="מדיניות פרטיות — BiDi">
+  <body data-i18n-title="privacy.meta.pageTitle">
     <div class="bg-grid" aria-hidden="true"></div>
 
     <header class="nav-header">
@@ -20,18 +20,19 @@
           <span>BiDi</span>
         </a>
         <div class="nav__links">
-          <a href="./" data-en="Home" data-he="בית">Home</a>
+          <a href="./" data-i18n="common.nav.home">Home</a>
           <a href="https://github.com/ekrako/bidi" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
         <div class="nav__actions">
-        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme" data-en-aria-label="Toggle theme" data-he-aria-label="החלף מצב תצוגה">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme" data-i18n-aria-label="common.themeToggle.ariaLabel">
           <svg class="theme-toggle__icon theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           <svg class="theme-toggle__icon theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <button class="lang-toggle" id="langToggle" type="button" aria-label="Toggle language" data-en-aria-label="Toggle language" data-he-aria-label="החלף שפה">
+        <button class="lang-toggle" id="langToggle" type="button" aria-label="Toggle language" data-i18n-aria-label="common.langToggle.ariaLabel">
           <span class="lang-toggle__track">
-            <span class="lang-toggle__option" data-lang="he">עב</span>
             <span class="lang-toggle__option lang-toggle__option--active" data-lang="en">EN</span>
+            <span class="lang-toggle__option" data-lang="ar">عر</span>
+            <span class="lang-toggle__option" data-lang="he">עב</span>
             <span class="lang-toggle__thumb"></span>
           </span>
         </button>
@@ -41,45 +42,45 @@
 
     <main>
       <section class="policy container">
-        <h1 class="policy__title" data-en="Privacy Policy" data-he="מדיניות פרטיות">Privacy Policy</h1>
-        <p class="policy__updated" data-en="Effective date: April 2, 2026" data-he="תאריך תחילה: 2 באפריל, 2026">Effective date: April 2, 2026</p>
+        <h1 class="policy__title" data-i18n="privacy.title">Privacy Policy</h1>
+        <p class="policy__updated" data-i18n="privacy.updated">Effective date: April 2, 2026</p>
 
-        <h2 data-en="Overview" data-he="סקירה כללית">Overview</h2>
-        <p data-en="BiDi is a browser extension that fixes text direction (RTL/LTR) on websites for users of Hebrew, Arabic, Persian, and other right-to-left languages. This policy describes what data BiDi accesses, how it is used, and your rights." data-he="BiDi הוא תוסף דפדפן שמתקן כיוון טקסט (RTL/LTR) באתרים עבור משתמשי עברית, ערבית, פרסית ושפות מימין-לשמאל אחרות. מדיניות זו מתארת אילו נתונים BiDi ניגש אליהם, כיצד הם בשימוש, ומהן הזכויות שלך.">BiDi is a browser extension that fixes text direction (RTL/LTR) on websites for users of Hebrew, Arabic, Persian, and other right-to-left languages. This policy describes what data BiDi accesses, how it is used, and your rights.</p>
-        <p><strong data-en="Short version: BiDi does not collect, transmit, or sell any personal data." data-he="בקצרה: BiDi לא אוסף, משדר או מוכר מידע אישי כלשהו.">Short version: BiDi does not collect, transmit, or sell any personal data.</strong> <span data-en="It stores only your text-direction preferences, locally in your browser." data-he="הוא שומר רק את העדפות כיוון הטקסט שלך, מקומית בדפדפן.">It stores only your text-direction preferences, locally in your browser.</span></p>
+        <h2 data-i18n="privacy.overview.title">Overview</h2>
+        <p data-i18n="privacy.overview.desc">BiDi is a browser extension that fixes text direction (RTL/LTR) on websites for users of Hebrew, Arabic, Persian, and other right-to-left languages. This policy describes what data BiDi accesses, how it is used, and your rights.</p>
+        <p><strong data-i18n="privacy.overview.short">Short version: BiDi does not collect, transmit, or sell any personal data.</strong> <span data-i18n="privacy.overview.stores">It stores only your text-direction preferences, locally in your browser.</span></p>
 
-        <h2 data-en="Data Collected" data-he="מידע שנאסף">Data Collected</h2>
-        <p data-en="BiDi stores one thing: your per-site direction mode preference (None, Auto, or Full RTL)." data-he="BiDi שומר דבר אחד: העדפת מצב הכיוון שלך לכל אתר (ללא, אוטומטי, או RTL מלא).">BiDi stores one thing: your per-site direction mode preference (None, Auto, or Full RTL).</p>
+        <h2 data-i18n="privacy.data.title">Data Collected</h2>
+        <p data-i18n="privacy.data.desc">BiDi stores one thing: your per-site direction mode preference (None, Auto, or Full RTL).</p>
         <ul>
-          <li><strong data-en="What is stored:" data-he="מה נשמר:">What is stored:</strong> <span data-html data-en='A mapping of website hostnames to a mode value (e.g., <code>{"chat.openai.com": "auto"}</code>).' data-he='מיפוי של כתובות אתרים לערך מצב (לדוגמה, <code>{"chat.openai.com": "auto"}</code>).'>A mapping of website hostnames to a mode value (e.g., <code>{"chat.openai.com": "auto"}</code>).</span></li>
-          <li><strong data-en="Where it is stored:" data-he="היכן זה נשמר:">Where it is stored:</strong> <span data-html data-en="In Chrome's built-in <code>chrome.storage.sync</code> API. This syncs across your Chrome instances via your Google account, under Google's privacy policy." data-he='בממשק <code>chrome.storage.sync</code> המובנה של כרום. זה מסונכרן בין מופעי הכרום שלך דרך חשבון Google שלך, בכפוף למדיניות הפרטיות של Google.'>In Chrome's built-in <code>chrome.storage.sync</code> API. This syncs across your Chrome instances via your Google account, under Google's privacy policy.</span></li>
-          <li><strong data-en="What is NOT stored:" data-he="מה לא נשמר:">What is NOT stored:</strong> <span data-en="Page content, browsing history, text you type, personally identifiable information of any kind." data-he="תוכן דפים, היסטוריית גלישה, טקסט שאתה מקליד, מידע מזהה אישי מכל סוג.">Page content, browsing history, text you type, personally identifiable information of any kind.</span></li>
+          <li><strong data-i18n="privacy.data.whatStored">What is stored:</strong> <span data-i18n="privacy.data.whatStoredDesc$html">A mapping of website hostnames to a mode value (e.g., <code>{"chat.openai.com": "auto"}</code>).</span></li>
+          <li><strong data-i18n="privacy.data.whereStored">Where it is stored:</strong> <span data-i18n="privacy.data.whereStoredDesc$html">In Chrome's built-in <code>chrome.storage.sync</code> API. This syncs across your Chrome instances via your Google account, under Google's privacy policy.</span></li>
+          <li><strong data-i18n="privacy.data.whatNot">What is NOT stored:</strong> <span data-i18n="privacy.data.whatNotDesc">Page content, browsing history, text you type, personally identifiable information of any kind.</span></li>
         </ul>
 
-        <h2 data-en="Data Transmission" data-he="העברת מידע">Data Transmission</h2>
-        <p data-en="BiDi does not contact any external servers. It does not send any data to the extension developer or any third party. No analytics, no telemetry, no crash reporting." data-he="BiDi לא יוצר קשר עם שרתים חיצוניים. הוא לא שולח שום מידע למפתח התוסף או לצד שלישי כלשהו. ללא אנליטיקות, ללא טלמטריה, ללא דיווחי קריסות.">BiDi does not contact any external servers. It does not send any data to the extension developer or any third party. No analytics, no telemetry, no crash reporting.</p>
-        <p data-en="The only network activity is the Chrome sync of your settings, which is handled entirely by Chrome and Google — not by BiDi." data-he="הפעילות הרשתית היחידה היא סנכרון ההגדרות של כרום, שמטופל לחלוטין על ידי כרום ו-Google — לא על ידי BiDi.">The only network activity is the Chrome sync of your settings, which is handled entirely by Chrome and Google — not by BiDi.</p>
+        <h2 data-i18n="privacy.transmission.title">Data Transmission</h2>
+        <p data-i18n="privacy.transmission.desc1">BiDi does not contact any external servers. It does not send any data to the extension developer or any third party. No analytics, no telemetry, no crash reporting.</p>
+        <p data-i18n="privacy.transmission.desc2">The only network activity is the Chrome sync of your settings, which is handled entirely by Chrome and Google — not by BiDi.</p>
 
-        <h2 data-en="Permissions Used" data-he="הרשאות בשימוש">Permissions Used</h2>
+        <h2 data-i18n="privacy.permissions.title">Permissions Used</h2>
         <ul>
-          <li><strong>storage</strong> — <span data-en="Read and write your per-site direction settings." data-he="קריאה וכתיבה של הגדרות כיוון לכל אתר.">Read and write your per-site direction settings.</span></li>
-          <li><strong>activeTab / tabs</strong> — <span data-en="Read the hostname of the current tab to display the correct setting in the popup. No tab content is accessed." data-he="קריאת שם המארח של הלשונית הנוכחית להצגת ההגדרה הנכונה בחלון הקופץ. אין גישה לתוכן הלשונית.">Read the hostname of the current tab to display the correct setting in the popup. No tab content is accessed.</span></li>
-          <li><strong>scripting</strong> — <span data-en="Inject the CSS direction rules into the page. Only direction-related styles are applied; no page content is read or transmitted." data-he="הזרקת כללי CSS של כיוון לדף. רק סגנונות הקשורים לכיוון מוחלים; תוכן הדף לא נקרא או משודר.">Inject the CSS direction rules into the page. Only direction-related styles are applied; no page content is read or transmitted.</span></li>
-          <li><strong data-en="All URLs (<all_urls>)" data-he="כל הכתובות (<all_urls>)">All URLs (&lt;all_urls&gt;)</strong> — <span data-en="Required to apply direction settings on any website. The extension only reads the hostname, never the full page content." data-he="נדרש להחלת הגדרות כיוון בכל אתר. התוסף קורא רק את שם המארח, אף פעם לא את תוכן הדף המלא.">Required to apply direction settings on any website. The extension only reads the hostname, never the full page content.</span></li>
+          <li><strong>storage</strong> — <span data-i18n="privacy.permissions.storage">Read and write your per-site direction settings.</span></li>
+          <li><strong>activeTab / tabs</strong> — <span data-i18n="privacy.permissions.tabs">Read the hostname of the current tab to display the correct setting in the popup. No tab content is accessed.</span></li>
+          <li><strong>scripting</strong> — <span data-i18n="privacy.permissions.scripting">Inject the CSS direction rules into the page. Only direction-related styles are applied; no page content is read or transmitted.</span></li>
+          <li><strong data-i18n="privacy.permissions.urls">All URLs (&lt;all_urls&gt;)</strong> — <span data-i18n="privacy.permissions.urlsDesc">Required to apply direction settings on any website. The extension only reads the hostname, never the full page content.</span></li>
         </ul>
 
-        <h2 data-en="Third-Party Services" data-he="שירותי צד שלישי">Third-Party Services</h2>
-        <p data-en="BiDi extension itself uses no third-party services, SDKs, or analytics tools. However, this website uses Google Fonts to deliver consistent typography." data-he="תוסף ה-BiDi עצמו אינו משתמש בשירותי צד שלישי, SDK-ים או כלי אנליטיקה. עם זאת, אתר זה משתמש ב-Google Fonts כדי לספק טיפוגרפיה עקבית.">BiDi extension itself uses no third-party services, SDKs, or analytics tools. However, this website uses Google Fonts to deliver consistent typography.</p>
+        <h2 data-i18n="privacy.thirdParty.title">Third-Party Services</h2>
+        <p data-i18n="privacy.thirdParty.desc">BiDi extension itself uses no third-party services, SDKs, or analytics tools. However, this website uses Google Fonts to deliver consistent typography.</p>
 
-        <h2 data-en="Children's Privacy" data-he="פרטיות ילדים">Children's Privacy</h2>
-        <p data-en="BiDi does not collect any data from any user, including children." data-he="BiDi לא אוסף שום מידע משום משתמש, כולל ילדים.">BiDi does not collect any data from any user, including children.</p>
+        <h2 data-i18n="privacy.children.title">Children's Privacy</h2>
+        <p data-i18n="privacy.children.desc">BiDi does not collect any data from any user, including children.</p>
 
-        <h2 data-en="Changes to This Policy" data-he="שינויים במדיניות זו">Changes to This Policy</h2>
-        <p data-en="If this policy changes, the updated version will be posted at this URL with a new effective date. Material changes will also be noted in the extension's version release notes on the Chrome Web Store." data-he="אם מדיניות זו תשתנה, הגרסה המעודכנת תפורסם בכתובת זו עם תאריך תחילה חדש. שינויים מהותיים יצוינו גם בהערות שחרור הגרסה של התוסף בחנות כרום.">If this policy changes, the updated version will be posted at this URL with a new effective date. Material changes will also be noted in the extension's version release notes on the Chrome Web Store.</p>
+        <h2 data-i18n="privacy.changes.title">Changes to This Policy</h2>
+        <p data-i18n="privacy.changes.desc">If this policy changes, the updated version will be posted at this URL with a new effective date. Material changes will also be noted in the extension's version release notes on the Chrome Web Store.</p>
 
-        <h2 data-en="Contact" data-he="יצירת קשר">Contact</h2>
+        <h2 data-i18n="privacy.contact.title">Contact</h2>
         <p>
-          <span data-en="Questions or concerns about this policy can be raised via the project's issue tracker:" data-he="שאלות או חששות לגבי מדיניות זו ניתן להעלות דרך מעקב הבעיות של הפרויקט:">Questions or concerns about this policy can be raised via the project's issue tracker:</span>
+          <span data-i18n="privacy.contact.desc">Questions or concerns about this policy can be raised via the project's issue tracker:</span>
           <a href="https://github.com/ekrako/bidi/issues" target="_blank" rel="noopener noreferrer">
             github.com/ekrako/bidi/issues
           </a>
@@ -94,8 +95,8 @@
           <span>BiDi</span>
         </div>
         <div class="footer__links">
-          <a href="./" data-en="Home" data-he="בית">Home</a>
-          <a href="https://github.com/ekrako/bidi/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-en="MIT License" data-he="רישיון MIT">MIT License</a>
+          <a href="./" data-i18n="common.nav.home">Home</a>
+          <a href="https://github.com/ekrako/bidi/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="common.footer.mitLicense">MIT License</a>
         </div>
         <p class="footer__copy">&copy; 2026 Eran Krakovsky</p>
       </div>
