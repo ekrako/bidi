@@ -211,7 +211,9 @@ export function initThemeToggle() {
   });
 }
 
-// Boot
+/**
+ * Initializes all site features in sequence, handling errors gracefully.
+ */
 function boot() {
   try { initThemeToggle(); } catch (e) { console.error("initThemeToggle failed", e); }
   try { initLanguageToggle(); } catch (e) { console.error("initLanguageToggle failed", e); }
