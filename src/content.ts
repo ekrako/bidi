@@ -1,42 +1,114 @@
 import { getSiteMode, type DirectionMode } from "./storage";
-import { containsRtl } from "./rtl";
+import { containsRtl, isRtlText } from "./rtl";
 
-const MARKER = "data-bidi";
+export const MARKER = "data-bidi";
+const MARKER_SELECTOR = `[${MARKER}]`;
+const INLINE_TAGS = new Set([
+  "SPAN",
+  "B",
+  "I",
+  "EM",
+  "STRONG",
+  "A",
+  "CODE",
+  "ABBR",
+  "CITE",
+  "SMALL",
+  "SUB",
+  "SUP",
+  "MARK",
+  "S",
+  "U",
+  "BUTTON",
+  "LABEL",
+  "BR",
+  "IMG",
+  "INPUT",
+  "SELECT",
+  "TEXTAREA",
+  "SVG",
+  "TIME",
+  "Q",
+  "KBD",
+  "VAR",
+  "SAMP",
+  "DFN",
+  "BDO",
+  "BDI",
+  "DEL",
+  "INS",
+  "DATA",
+  "OUTPUT",
+  "RUBY",
+  "WBR",
+]);
 
 let currentMode: DirectionMode = "none";
 let observer: MutationObserver | null = null;
 
-function getDirectText(el: HTMLElement): string {
+function markElement(
+  el: HTMLElement,
+  prop: "direction" | "unicodeBidi",
+  value: string,
+) {
+  if (el.style[prop] !== value) el.style[prop] = value;
+  if (!el.hasAttribute(MARKER)) el.setAttribute(MARKER, "");
+}
+
+function unmarkElement(el: HTMLElement) {
+  el.style.direction = "";
+  el.style.unicodeBidi = "";
+  el.removeAttribute(MARKER);
+}
+
+export function getInlineText(el: HTMLElement): string {
   let text = "";
-  for (const node of Array.from(el.childNodes)) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      text += node.textContent;
+  for (const child of el.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      text += child.textContent || "";
+    } else if (child instanceof HTMLElement && INLINE_TAGS.has(child.tagName)) {
+      text += child.textContent || "";
     }
   }
   return text;
 }
 
-function applyRtlToElement(el: HTMLElement) {
-  const directText = getDirectText(el);
-  const text = directText.trim().length > 0
-    ? directText
-    : el.children.length === 0
-      ? el.textContent || ""
-      : "";
-  if (text.trim().length === 0) return;
+function getDirectText(el: HTMLElement): string {
+  let text = "";
+  for (const child of el.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) text += child.textContent || "";
+  }
+  return text;
+}
 
-  if (containsRtl(text)) {
-    // unicode-bidi: plaintext lets the browser determine direction per-line
-    // based on first strong character — handles mixed RTL/LTR content correctly
-    el.style.unicodeBidi = "plaintext";
-    el.setAttribute(MARKER, "");
+export function applyRtlToElement(el: HTMLElement) {
+  if (INLINE_TAGS.has(el.tagName)) {
+    // Only check direct text — descendant inline elements are handled by the
+    // tree walker individually. Using el.textContent would mark wrappers like
+    // <span><b>שלום</b> hello</span> based on the inner <b>'s text.
+    const text = getDirectText(el);
+    if (containsRtl(text) && !el.parentElement?.closest(MARKER_SELECTOR)) {
+      markElement(el, "unicodeBidi", "plaintext");
+    } else if (el.hasAttribute(MARKER)) {
+      unmarkElement(el);
+    }
+    return;
+  }
+
+  const text = getInlineText(el);
+  if (text.trim().length === 0) {
+    if (el.hasAttribute(MARKER)) unmarkElement(el);
+    return;
+  }
+
+  if (isRtlText(text)) {
+    markElement(el, "direction", "rtl");
   } else if (el.hasAttribute(MARKER)) {
-    el.style.unicodeBidi = "";
-    el.removeAttribute(MARKER);
+    unmarkElement(el);
   }
 }
 
-function scanForRtl(root: Node) {
+export function scanForRtl(root: Node) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
   let node: Node | null = walker.currentNode;
   while (node) {
@@ -47,24 +119,56 @@ function scanForRtl(root: Node) {
   }
 }
 
+function nearestBlock(el: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = el;
+  while (current && INLINE_TAGS.has(current.tagName)) {
+    current = current.parentElement;
+  }
+  return current;
+}
+
 function startObserver() {
   if (observer) return;
   observer = new MutationObserver((mutations) => {
+    const blocksToUpdate = new Set<HTMLElement>();
+
     for (const mutation of mutations) {
       if (mutation.type === "characterData") {
         const parent = mutation.target.parentElement;
-        if (parent) applyRtlToElement(parent);
+        if (parent) {
+          // Apply directly to inline parents only; blocks are handled in the
+          // loop below where hadMarker is captured before any mutations.
+          if (INLINE_TAGS.has(parent.tagName)) applyRtlToElement(parent);
+          const block = nearestBlock(parent);
+          if (block) blocksToUpdate.add(block);
+        }
         continue;
       }
+      // Scan added subtrees individually (avoids full-container rescan)
       for (const node of Array.from(mutation.addedNodes)) {
-        if (node instanceof HTMLElement) {
-          applyRtlToElement(node);
-          scanForRtl(node);
-        }
+        if (node instanceof HTMLElement) scanForRtl(node);
+      }
+      // Re-evaluate the containing block's own direction
+      if (mutation.target instanceof HTMLElement) {
+        const block = nearestBlock(mutation.target);
+        if (block) blocksToUpdate.add(block);
+      }
+    }
+
+    // Only re-evaluate each block's direction; full rescan only if it flips
+    for (const block of blocksToUpdate) {
+      const hadMarker = block.hasAttribute(MARKER);
+      applyRtlToElement(block);
+      if (hadMarker !== block.hasAttribute(MARKER)) {
+        scanForRtl(block);
       }
     }
   });
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
 }
 
 function stopObserver() {
@@ -74,18 +178,16 @@ function stopObserver() {
   }
 }
 
-function clearAutoDirection() {
-  document.querySelectorAll<HTMLElement>(`[${MARKER}]`).forEach((el) => {
-    el.style.unicodeBidi = "";
-    el.removeAttribute(MARKER);
-  });
+export function clearAutoDirection() {
+  document
+    .querySelectorAll<HTMLElement>(MARKER_SELECTOR)
+    .forEach(unmarkElement);
 }
 
 function applyMode(mode: DirectionMode) {
   const prev = currentMode;
   currentMode = mode;
 
-  // Clean up previous mode
   if (prev === "rtl") {
     document.documentElement.style.direction = "";
   }
@@ -94,19 +196,24 @@ function applyMode(mode: DirectionMode) {
     clearAutoDirection();
   }
 
-  // Apply new mode
   if (mode === "rtl") {
     document.documentElement.style.direction = "rtl";
-  } else if (mode === "auto") {
+    return;
+  }
+  if (mode === "auto") {
     if (document.body) {
       scanForRtl(document.body);
       startObserver();
-    } else {
-      document.addEventListener("DOMContentLoaded", () => {
+      return;
+    }
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
         scanForRtl(document.body);
         startObserver();
-      }, { once: true });
-    }
+      },
+      { once: true },
+    );
   }
 }
 
@@ -115,7 +222,8 @@ async function init() {
   applyMode(mode);
 }
 
-chrome.storage.onChanged.addListener(async () => {
+chrome.storage.onChanged.addListener(async (_changes, area) => {
+  if (area !== "sync") return;
   const mode = await getSiteMode(location.hostname);
   applyMode(mode);
 });

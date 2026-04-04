@@ -1,5 +1,5 @@
 {
-  "name": "BiDi",
+  "name": "bidi",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -10,8 +10,9 @@
     "test": "bun test"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.8.9",
     "@types/bun": "latest",
-    "@types/chrome": "^0.1.38",
+    "@types/chrome": "^0.1.39",
     "happy-dom": "^20.8.9"
   },
   "peerDependencies": {
