@@ -1,7 +1,6 @@
 // BiDi Website — Language toggle, scroll reveals, smooth interactions
 
-type Lang = "en" | "he";
-const SUPPORTED_LANGS: Lang[] = ["en", "he"];
+import { type Lang, SUPPORTED_LANGS, t } from "./i18n/index";
 
 /**
  * Validates and returns a supported language.
@@ -25,7 +24,6 @@ export function initLanguageToggle() {
     applyLanguage(currentLang);
   }
   toggle.setAttribute("data-active", currentLang);
-  toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
 
   toggle.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -36,27 +34,26 @@ export function initLanguageToggle() {
       if (selectedLang === currentLang) return;
       currentLang = selectedLang;
     } else {
-      // Toggle if clicked on the track or thumb
-      currentLang = currentLang === "en" ? "he" : "en";
+      // Cycle through languages: en → ar → he → en
+      const langIndex = SUPPORTED_LANGS.indexOf(currentLang);
+      currentLang = SUPPORTED_LANGS[(langIndex + 1) % SUPPORTED_LANGS.length];
     }
 
     localStorage.setItem("bidi-lang", currentLang);
     applyLanguage(currentLang);
     toggle.setAttribute("data-active", currentLang);
-    toggle.setAttribute("aria-pressed", currentLang === "he" ? "true" : "false");
   });
 }
 
 /**
  * Applies the specified language to the document, updating direction, translatable elements, and the page title.
- * @param lang - The language to apply ('en' or 'he').
  */
 export function applyLanguage(lang: Lang) {
   const html = document.documentElement;
 
   // Set document direction and language
   html.setAttribute("lang", lang);
-  html.setAttribute("dir", lang === "he" ? "rtl" : "ltr");
+  html.setAttribute("dir", lang === "en" ? "ltr" : "rtl");
 
   // Update language toggle visual state
   const options = document.querySelectorAll(".lang-toggle__option");
@@ -68,38 +65,42 @@ export function applyLanguage(lang: Lang) {
     }
   }
 
-  // Update all translatable elements (content and attributes)
-  const translatables = document.querySelectorAll<HTMLElement>("[data-en], [data-he]");
+  // Update all translatable elements
+  const translatables = document.querySelectorAll<HTMLElement>(
+    "[data-i18n], [data-i18n-aria-label]"
+  );
   for (const el of translatables) {
-    // 1. Handle content
-    const text = el.getAttribute(`data-${lang}`);
-    if (text !== null) {
-      if (el.hasAttribute("data-html")) {
-        el.innerHTML = text;
+    // Handle text content
+    const key = el.getAttribute("data-i18n");
+    if (key) {
+      const value = t(lang, key);
+      if (key.endsWith("$html")) {
+        el.innerHTML = value;
       } else if (el.children.length === 0) {
-        el.textContent = text;
+        el.textContent = value;
       }
     }
 
-    // 2. Handle attributes (e.g., data-he-aria-label -> aria-label)
+    // Handle attribute translations (data-i18n-{attr} → {attr})
     for (const attr of el.attributes) {
-      if (attr.name.startsWith(`data-${lang}-`)) {
-        const targetAttr = attr.name.slice(`data-${lang}-`.length);
-        el.setAttribute(targetAttr, attr.value);
+      if (attr.name.startsWith("data-i18n-") && attr.name !== "data-i18n") {
+        const targetAttr = attr.name.slice("data-i18n-".length);
+        el.setAttribute(targetAttr, t(lang, attr.value));
       }
     }
   }
 
-  // Update page title (use body data attributes if present, otherwise default)
-  const titleEn = document.body.getAttribute("data-page-title-en");
-  const titleHe = document.body.getAttribute("data-page-title-he");
-  if (titleEn && titleHe) {
-    document.title = lang === "he" ? titleHe : titleEn;
+  // Update page title
+  const titleKey = document.body.dataset.i18nTitle;
+  if (titleKey) {
+    document.title = t(lang, titleKey);
   } else {
-    document.title =
-      lang === "he"
-        ? "BiDi — RTL חכם לרשת המודרנית"
-        : "BiDi — Smart RTL for the Modern Web";
+    const defaults: Record<Lang, string> = {
+      en: "BiDi — Smart RTL for the Modern Web",
+      ar: "BiDi — RTL ذكي للويب الحديث",
+      he: "BiDi — RTL חכם לרשת המודרנית",
+    };
+    document.title = defaults[lang];
   }
 }
 
@@ -211,9 +212,15 @@ export function initThemeToggle() {
 }
 
 // Boot
-document.addEventListener("DOMContentLoaded", () => {
-  initThemeToggle();
-  initLanguageToggle();
-  initScrollReveal();
-  initSmoothAnchors();
-});
+function boot() {
+  try { initThemeToggle(); } catch (e) { console.error("initThemeToggle failed", e); }
+  try { initLanguageToggle(); } catch (e) { console.error("initLanguageToggle failed", e); }
+  try { initScrollReveal(); } catch (e) { console.error("initScrollReveal failed", e); }
+  try { initSmoothAnchors(); } catch (e) { console.error("initSmoothAnchors failed", e); }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
