@@ -94,16 +94,7 @@ export function applyLanguage(lang: Lang) {
 
   // Update page title
   const titleKey = document.body.dataset.i18nTitle;
-  if (titleKey) {
-    document.title = t(lang, titleKey);
-  } else {
-    const defaults: Record<Lang, string> = {
-      en: "BiDi — Smart RTL for the Modern Web",
-      ar: "BiDi — RTL ذكي للويب الحديث",
-      he: "BiDi — RTL חכם לרשת המודרנית",
-    };
-    document.title = defaults[lang];
-  }
+  document.title = t(lang, titleKey || "index.meta.pageTitle");
 }
 
 /**
