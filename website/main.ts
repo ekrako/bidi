@@ -75,8 +75,9 @@ export function applyLanguage(lang: Lang) {
     if (key) {
       const value = t(lang, key);
       if (key.endsWith("$html")) {
-        // SECURITY: innerHTML is safe here because translations are hardcoded
-        // at build time and never contain user input.
+        // SECURITY: innerHTML is safe because translations are bundled at build
+        // time via t(lang, key) — never user input. Any translations using the
+        // "$html" suffix must be reviewed by maintainers to avoid XSS.
         el.innerHTML = value;
       } else if (el.children.length === 0) {
         el.textContent = value;
