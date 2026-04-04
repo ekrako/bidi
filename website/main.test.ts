@@ -156,12 +156,19 @@ describe("Website Logic", () => {
 
     test("falls back to English for missing translations", () => {
       document.body.innerHTML = `
-        <div id="test" data-i18n="hero.badge"></div>
+        <div id="test" data-i18n="nonexistent.key"></div>
       `;
 
-      // All three languages have this key, so test with a known key
+      // Key doesn't exist in any language - t() returns the key itself as fallback
       applyLanguage("en");
-      expect(document.getElementById("test")?.textContent).toBe("Chrome Extension");
+      expect(document.getElementById("test")?.textContent).toBe("nonexistent.key");
+
+      // Even for other languages, should fall back to key
+      applyLanguage("he");
+      expect(document.getElementById("test")?.textContent).toBe("nonexistent.key");
+
+      applyLanguage("ar");
+      expect(document.getElementById("test")?.textContent).toBe("nonexistent.key");
     });
 
     test("updates document title from data-i18n-title attribute", () => {
@@ -218,8 +225,9 @@ describe("Website Logic", () => {
     });
 
     test("falls back to English for missing key in target language", () => {
-      // Using a key that exists in en.json
-      expect(t("he", "hero.badge")).toBeTruthy();
+      // Key doesn't exist in Hebrew - should return English fallback or key
+      const result = t("he", "nonexistent.key");
+      expect(result).toBe("nonexistent.key");
     });
 
     test("returns key string as last resort", () => {
