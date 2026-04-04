@@ -15,6 +15,16 @@ describe("Website Logic", () => {
     global.Node = window.Node as any;
     global.HTMLElement = window.HTMLElement as any;
     global.matchMedia = window.matchMedia.bind(window) as any;
+    global.IntersectionObserver = class implements IntersectionObserver {
+      readonly root: Element | null = null;
+      readonly rootMargin: string = "";
+      readonly thresholds: ReadonlyArray<number> = [];
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    } as any;
 
     // Load module after globals are set
     const main = await import("./main");
@@ -153,6 +163,38 @@ describe("Website Logic", () => {
       applyLanguage("en");
       expect(document.getElementById("test")?.textContent).toBe("Chrome Extension");
     });
+
+    test("updates document title from data-i18n-title attribute", () => {
+      document.body.dataset.i18nTitle = "index.meta.pageTitle";
+      applyLanguage("en");
+      expect(document.title).toBe("BiDi — Smart RTL for the Modern Web");
+    });
+
+    test("uses default title when data-i18n-title is not set", () => {
+      delete document.body.dataset.i18nTitle;
+      applyLanguage("en");
+      expect(document.title).toBe("BiDi — Smart RTL for the Modern Web");
+
+      applyLanguage("he");
+      expect(document.title).toBe("BiDi — RTL חכם לרשת המודרנית");
+
+      applyLanguage("ar");
+      expect(document.title).toBe("BiDi — RTL ذكي للويب الحديث");
+    });
+
+    test("updates data-i18n-title attribute on toggle option", () => {
+      document.body.innerHTML = `
+        <div class="lang-toggle__option" data-lang="en">EN</div>
+        <div class="lang-toggle__option lang-toggle__option--active" data-lang="he">HE</div>
+        <div class="lang-toggle__option" data-lang="ar">AR</div>
+      `;
+
+      applyLanguage("en");
+      const options = document.querySelectorAll(".lang-toggle__option");
+      expect(options[0].classList.contains("lang-toggle__option--active")).toBe(true);
+      expect(options[1].classList.contains("lang-toggle__option--active")).toBe(false);
+      expect(options[2].classList.contains("lang-toggle__option--active")).toBe(false);
+    });
   });
 
   describe("i18n t() function", () => {
@@ -227,21 +269,52 @@ describe("Website Logic", () => {
       expect(localStorage.getItem("bidi-lang")).toBe("he");
     });
 
-    test("initThemeToggle setup and click", () => {
+    test("initLanguageToggle cycles through languages on toggle click", () => {
       localStorage.clear();
       document.body.innerHTML = `
-        <button id="themeToggle"></button>
+        <button id="langToggle">
+          <span class="lang-toggle__track">
+            <span class="lang-toggle__option" data-lang="en">EN</span>
+            <span class="lang-toggle__option" data-lang="ar">عر</span>
+            <span class="lang-toggle__option" data-lang="he">עב</span>
+            <span class="lang-toggle__thumb"></span>
+          </span>
+        </button>
       `;
 
-      initThemeToggle();
-      const toggle = document.getElementById("themeToggle");
-      const initialTheme = document.documentElement.getAttribute("data-theme");
-      expect(["light", "dark"]).toContain(initialTheme);
+      initLanguageToggle();
+      const toggle = document.getElementById("langToggle")!;
+      expect(toggle.getAttribute("data-active")).toBe("en");
 
-      toggle?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-      const nextTheme = initialTheme === "dark" ? "light" : "dark";
-      expect(document.documentElement.getAttribute("data-theme")).toBe(nextTheme);
-      expect(localStorage.getItem("bidi-theme")).toBe(nextTheme);
+      // Click the toggle button itself to cycle
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      expect(toggle.getAttribute("data-active")).toBe("ar");
+
+      // Cycle again
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      expect(toggle.getAttribute("data-active")).toBe("he");
+
+      // Cycle again back to en
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      expect(toggle.getAttribute("data-active")).toBe("en");
+    });
+
+    test("initLanguageToggle applies saved language on load", () => {
+      localStorage.setItem("bidi-lang", "he");
+      document.body.innerHTML = `
+        <button id="langToggle">
+          <span class="lang-toggle__track">
+            <span class="lang-toggle__option" data-lang="en">EN</span>
+            <span class="lang-toggle__option" data-lang="ar">عر</span>
+            <span class="lang-toggle__option" data-lang="he">עב</span>
+            <span class="lang-toggle__thumb"></span>
+          </span>
+        </button>
+      `;
+
+      initLanguageToggle();
+      expect(document.documentElement.getAttribute("lang")).toBe("he");
+      expect(document.documentElement.getAttribute("dir")).toBe("rtl");
     });
   });
 });
