@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          changed_files="$(git diff-tree -m --no-commit-id --name-only -r HEAD | sort -u)"
+          changed_files="$(git diff --name-only HEAD^1..HEAD 2>/dev/null | sort -u || true)"
 
           if [ -z "$changed_files" ]; then
             changed_files="$(git ls-tree --name-only -r HEAD)"

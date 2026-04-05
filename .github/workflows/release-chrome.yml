@@ -50,7 +50,7 @@ jobs:
 
       - name: Authenticate for Chrome Web Store API
         id: chrome-web-store-auth
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           credentials_json: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
           token_format: access_token
@@ -67,7 +67,10 @@ jobs:
           response_file="$(mktemp)"
           status_file="$(mktemp)"
           stderr_file="$(mktemp)"
-          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
+          fetch_response_file="$(mktemp)"
+          fetch_status_file="$(mktemp)"
+          fetch_stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file" "$fetch_response_file" "$fetch_status_file" "$fetch_stderr_file"' EXIT
           curl_rc=0
 
           curl \
@@ -95,6 +98,70 @@ jobs:
             echo "Chrome Web Store upload failed." >&2
             exit 1
           fi
+
+          max_attempts=30
+          sleep_seconds=10
+          attempt=1
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            fetch_curl_rc=0
+
+            curl \
+              --silent \
+              --show-error \
+              --output "$fetch_response_file" \
+              --write-out "%{http_code}" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:fetchStatus" \
+              > "$fetch_status_file" 2> "$fetch_stderr_file" || fetch_curl_rc=$?
+
+            fetch_http_status="$(cat "$fetch_status_file")"
+
+            echo "Chrome Web Store fetchStatus HTTP status: $fetch_http_status"
+            echo "Chrome Web Store fetchStatus response:"
+            cat "$fetch_response_file"
+            if [ -s "$fetch_stderr_file" ]; then
+              echo "Chrome Web Store fetchStatus stderr:"
+              cat "$fetch_stderr_file" >&2
+            fi
+
+            if [ "$fetch_curl_rc" -ne 0 ] || [ "$fetch_http_status" -lt 200 ] || [ "$fetch_http_status" -ge 300 ]; then
+              echo "Chrome Web Store fetchStatus failed." >&2
+              exit 1
+            fi
+
+            async_state="$(jq -r '.lastAsyncUploadState // empty' "$fetch_response_file")"
+
+            if [ -z "$async_state" ]; then
+              echo "Chrome Web Store fetchStatus did not include lastAsyncUploadState." >&2
+              exit 1
+            fi
+
+            echo "Chrome Web Store async upload state: $async_state (attempt $attempt/$max_attempts)"
+
+            case "$async_state" in
+              SUCCEEDED)
+                break
+                ;;
+              IN_PROGRESS)
+                if [ "$attempt" -eq "$max_attempts" ]; then
+                  echo "Chrome Web Store upload status polling timed out." >&2
+                  exit 1
+                fi
+                sleep "$sleep_seconds"
+                ;;
+              FAILED)
+                echo "Chrome Web Store upload failed asynchronously." >&2
+                exit 1
+                ;;
+              *)
+                echo "Unexpected Chrome Web Store async upload state: $async_state" >&2
+                exit 1
+                ;;
+            esac
+
+            attempt=$((attempt + 1))
+          done
 
       - name: Submit Chrome Web Store release for review
         env:
