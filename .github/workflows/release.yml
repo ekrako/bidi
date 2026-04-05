@@ -119,6 +119,7 @@ jobs:
           response_file="$(mktemp)"
           status_file="$(mktemp)"
           stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
           curl_rc=0
 
           curl \
@@ -159,6 +160,7 @@ jobs:
           response_file="$(mktemp)"
           status_file="$(mktemp)"
           stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
           curl_rc=0
 
           curl \
