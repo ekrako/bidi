@@ -70,13 +70,71 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
-        env:
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
-          RELEASE_NAME: ${{ env.RELEASE_NAME }}
-          PRERELEASE: ${{ env.PRERELEASE }}
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_NAME }}
           files: bidi-release.zip
           prerelease: ${{ env.PRERELEASE == 'true' }}
           generate_release_notes: true
+
+      - name: Validate Chrome Web Store publish configuration
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          CHROME_WEB_STORE_CREDENTIALS: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+          CHROME_WEB_STORE_SERVICE_ACCOUNT: ${{ vars.CHROME_WEB_STORE_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          [ -n "$CHROME_WEB_STORE_CREDENTIALS" ] || missing+=("secrets.CHROME_WEB_STORE_CREDENTIALS")
+          [ -n "$CHROME_WEB_STORE_EXTENSION_ID" ] || missing+=("vars.CHROME_WEB_STORE_EXTENSION_ID")
+          [ -n "$CHROME_WEB_STORE_PUBLISHER_ID" ] || missing+=("vars.CHROME_WEB_STORE_PUBLISHER_ID")
+          [ -n "$CHROME_WEB_STORE_SERVICE_ACCOUNT" ] || missing+=("vars.CHROME_WEB_STORE_SERVICE_ACCOUNT")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing Chrome Web Store CI configuration:\n' >&2
+            printf '  - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate for Chrome Web Store API
+        if: ${{ env.PRERELEASE == 'false' }}
+        id: chrome-web-store-auth
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          service_account: ${{ vars.CHROME_WEB_STORE_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Upload package to Chrome Web Store
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            -T bidi-release.zip \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:upload"
+
+      - name: Submit Chrome Web Store release for review
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:publish"
