@@ -5,11 +5,20 @@ await Bun.build({
   entrypoints: [
     "src/content.ts",
     "src/popup.ts",
-    "src/background.ts",
   ],
   outdir: "dist",
   target: "browser",
   format: "iife",
+  minify: false,
+});
+
+await Bun.build({
+  entrypoints: [
+    "src/background.ts",
+  ],
+  outdir: "dist",
+  target: "browser",
+  format: "esm",
   minify: false,
 });
 
@@ -38,6 +47,5 @@ for (const htmlFile of ["index.html", "privacy.html"]) {
 await cp("website/style.css", "docs/style.css");
 await cp("website/google8f710ed7675febd3.html", "docs/google8f710ed7675febd3.html");
 await cp("icons", "docs/icons", { recursive: true });
-await cp("website/google8f710ed7675febd3.html", "docs/google8f710ed7675febd3.html");
 
 console.log("Website build complete → docs/");

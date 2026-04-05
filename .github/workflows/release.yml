@@ -83,7 +83,6 @@ jobs:
           CHROME_WEB_STORE_CREDENTIALS: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
           CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
           CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
-          CHROME_WEB_STORE_SERVICE_ACCOUNT: ${{ vars.CHROME_WEB_STORE_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
 
@@ -92,7 +91,6 @@ jobs:
           [ -n "$CHROME_WEB_STORE_CREDENTIALS" ] || missing+=("secrets.CHROME_WEB_STORE_CREDENTIALS")
           [ -n "$CHROME_WEB_STORE_EXTENSION_ID" ] || missing+=("vars.CHROME_WEB_STORE_EXTENSION_ID")
           [ -n "$CHROME_WEB_STORE_PUBLISHER_ID" ] || missing+=("vars.CHROME_WEB_STORE_PUBLISHER_ID")
-          [ -n "$CHROME_WEB_STORE_SERVICE_ACCOUNT" ] || missing+=("vars.CHROME_WEB_STORE_SERVICE_ACCOUNT")
 
           if [ ${#missing[@]} -gt 0 ]; then
             printf 'Missing Chrome Web Store CI configuration:\n' >&2
@@ -106,7 +104,6 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
-          service_account: ${{ vars.CHROME_WEB_STORE_SERVICE_ACCOUNT }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/chromewebstore
 
@@ -119,11 +116,36 @@ jobs:
         run: |
           set -euo pipefail
 
-          curl --fail-with-body --silent --show-error \
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -X POST \
             -T bidi-release.zip \
-            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:upload"
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:upload" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store upload HTTP status: $http_status"
+          echo "Chrome Web Store upload response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store upload stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store upload failed." >&2
+            exit 1
+          fi
 
       - name: Submit Chrome Web Store release for review
         if: ${{ env.PRERELEASE == 'false' }}
@@ -134,7 +156,32 @@ jobs:
         run: |
           set -euo pipefail
 
-          curl --fail-with-body --silent --show-error \
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -X POST \
-            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:publish"
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:publish" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store publish HTTP status: $http_status"
+          echo "Chrome Web Store publish response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store publish stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store publish failed. The package may already be uploaded but remain unpublished. Check the Chrome Web Store Dashboard and resubmit or publish manually." >&2
+            exit 1
+          fi
