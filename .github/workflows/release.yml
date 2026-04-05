@@ -13,9 +13,6 @@ on:
         type: boolean
         default: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -49,17 +46,144 @@ jobs:
           name: bidi-extension-zip
           path: bidi-release.zip
 
-      - name: Extract Version from Manifest
-        id: extract_version
+      - name: Extract Version and Branch Info
+        env:
+          PRERELEASE_INPUT: ${{ github.event.inputs.prerelease }}
         run: |
           VERSION=$(jq -r .version manifest.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+
+          if [ "$BRANCH" = "main" ]; then
+            TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
+            NAME="BiDi v${VERSION} (Build ${GITHUB_RUN_NUMBER})"
+            PRERELEASE="${PRERELEASE_INPUT:-false}"
+          else
+            TAG="v${VERSION}-${SAFE_BRANCH}.${GITHUB_RUN_NUMBER}"
+            NAME="BiDi v${VERSION} (${BRANCH} #${GITHUB_RUN_NUMBER})"
+            PRERELEASE="true"
+          fi
+
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$NAME" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
-          tag_name: v${{ env.VERSION }}-build.${{ github.run_number }}
-          name: BiDi v${{ env.VERSION }} (Build ${{ github.run_number }})
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_NAME }}
           files: bidi-release.zip
-          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || github.ref != 'refs/heads/main' }}
+          prerelease: ${{ env.PRERELEASE == 'true' }}
           generate_release_notes: true
+
+      - name: Validate Chrome Web Store publish configuration
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          CHROME_WEB_STORE_CREDENTIALS: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          [ -n "$CHROME_WEB_STORE_CREDENTIALS" ] || missing+=("secrets.CHROME_WEB_STORE_CREDENTIALS")
+          [ -n "$CHROME_WEB_STORE_EXTENSION_ID" ] || missing+=("vars.CHROME_WEB_STORE_EXTENSION_ID")
+          [ -n "$CHROME_WEB_STORE_PUBLISHER_ID" ] || missing+=("vars.CHROME_WEB_STORE_PUBLISHER_ID")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing Chrome Web Store CI configuration:\n' >&2
+            printf '  - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate for Chrome Web Store API
+        if: ${{ env.PRERELEASE == 'false' }}
+        id: chrome-web-store-auth
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Upload package to Chrome Web Store
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            -T bidi-release.zip \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:upload" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store upload HTTP status: $http_status"
+          echo "Chrome Web Store upload response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store upload stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store upload failed." >&2
+            exit 1
+          fi
+
+      - name: Submit Chrome Web Store release for review
+        if: ${{ env.PRERELEASE == 'false' }}
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:publish" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store publish HTTP status: $http_status"
+          echo "Chrome Web Store publish response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store publish stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store publish failed. The package may already be uploaded but remain unpublished. Check the Chrome Web Store Dashboard and resubmit or publish manually." >&2
+            exit 1
+          fi

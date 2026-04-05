@@ -6,9 +6,9 @@
 
 ## Features
 
--   **None (Default):** Standard browser behavior for the site.
+-   **None:** Standard browser behavior for the site.
 -   **RTL (Force):** Forces the entire page to use `direction: rtl`.
--   **Auto (Smart Detection):** Dynamically detects RTL characters (Hebrew, Arabic, etc.) and applies RTL alignment only to elements containing RTL text. Uses a `MutationObserver` to handle dynamically loaded content in modern web apps (e.g., Claude, ChatGPT).
+-   **Auto (Smart Detection, default for new sites):** Dynamically detects RTL characters (Hebrew, Arabic, etc.) and applies RTL alignment only to elements containing RTL text. Uses a `MutationObserver` to handle dynamically loaded content in modern web apps (e.g., Claude, ChatGPT).
 -   **Persistence:** Your settings are saved per-site and synced across all your Chrome instances using `chrome.storage.sync`.
 -   **Clean UI:** Simple, non-intrusive popup for quick state toggling.
 
@@ -20,7 +20,7 @@ Since BiDi is currently in development, you can load it as an "unpacked extensio
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/erankor/bidi.git
+    git clone https://github.com/ekrako/bidi.git
     cd bidi
     ```
 2.  Install dependencies:
@@ -59,6 +59,13 @@ bun test
 - `src/storage.ts`: Persistence layer using `chrome.storage`.
 - `src/rtl.ts`: Utility for RTL text detection.
 - `manifest.json`: Extension metadata and permissions.
+
+### Documentation
+- [Code explanation and architecture notes](documentations/code-explained.md)
+
+### Release Notes
+- Stable release CI submits non-prerelease builds to the Chrome Web Store automatically.
+- If upload succeeds but the publish API call fails, the package can remain uploaded but unpublished. In that case, check the Chrome Web Store Dashboard, review the latest draft submission, and resubmit or publish it manually after fixing the reported issue.
 
 ---
 
