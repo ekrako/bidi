@@ -64,7 +64,7 @@ bun test
 - [Code explanation and architecture notes](documentations/code-explained.md)
 
 ### Release Notes
-- Stable release CI submits non-prerelease builds to the Chrome Web Store automatically.
+- Stable release CI submits non-prerelease GitHub releases to the Chrome Web Store automatically.
 - If upload succeeds but the publish API call fails, the package can remain uploaded but unpublished. In that case, check the Chrome Web Store Dashboard, review the latest draft submission, and resubmit or publish it manually after fixing the reported issue.
 
 ---

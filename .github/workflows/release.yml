@@ -41,7 +41,8 @@ jobs:
             changed_files="$(git ls-tree --name-only -r HEAD)"
           fi
 
-          if printf '%s\n' "$changed_files" | grep -Eq '^(src/|icons/|manifest\.json|build\.ts|index\.ts|package\.json|package-lock\.json|bun\.lock|tsconfig\.json)$'; then
+          if printf '%s\n' "$changed_files" | grep -Eq '^(src/|icons/)' || \
+             printf '%s\n' "$changed_files" | grep -Eq '^(manifest\.json|build\.ts|index\.ts|package\.json|package-lock\.json|bun\.lock|tsconfig\.json)$'; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -130,3 +131,13 @@ jobs:
           files: bidi-release.zip
           prerelease: ${{ fromJSON(needs.package-release.outputs.prerelease) }}
           generate_release_notes: true
+
+  chrome-release:
+    needs:
+      - package-release
+      - github-release
+    if: ${{ needs.package-release.result == 'success' && needs.github-release.result == 'success' && needs.package-release.outputs.should_release == 'true' && needs.package-release.outputs.prerelease == 'false' }}
+    uses: ./.github/workflows/release-chrome.yml
+    with:
+      release_tag: ${{ needs.package-release.outputs.release_tag }}
+    secrets: inherit

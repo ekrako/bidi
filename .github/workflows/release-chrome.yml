@@ -1,6 +1,12 @@
 name: Release to Chrome Web Store
 
 on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "GitHub release tag to publish to the Chrome Web Store"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       release_tag:
@@ -16,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.event.inputs.release_tag }}
 
     steps:
       - name: Download release asset from GitHub
@@ -23,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release download "${{ inputs.release_tag }}" \
+          gh release download "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --pattern bidi-release.zip \
             --dir .
@@ -99,6 +107,20 @@ jobs:
             exit 1
           fi
 
+          upload_state="$(jq -r '.uploadState // empty' "$response_file")"
+
+          case "$upload_state" in
+            SUCCEEDED)
+              exit 0
+              ;;
+            IN_PROGRESS)
+              ;;
+            *)
+              echo "Unexpected Chrome Web Store upload state: ${upload_state:-<empty>}" >&2
+              exit 1
+              ;;
+          esac
+
           max_attempts=30
           sleep_seconds=10
           attempt=1
@@ -112,7 +134,8 @@ jobs:
               --output "$fetch_response_file" \
               --write-out "%{http_code}" \
               -H "Authorization: Bearer $ACCESS_TOKEN" \
-              "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:fetchStatus" \
+              -X GET \
+              "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:fetchStatus" \
               > "$fetch_status_file" 2> "$fetch_stderr_file" || fetch_curl_rc=$?
 
             fetch_http_status="$(cat "$fetch_status_file")"
