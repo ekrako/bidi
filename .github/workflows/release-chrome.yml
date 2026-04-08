@@ -1,0 +1,203 @@
+name: Release to Chrome Web Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "GitHub release tag to publish to the Chrome Web Store"
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  chrome-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download release asset from GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "${{ inputs.release_tag }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern bidi-release.zip \
+            --dir .
+
+      - name: Validate Chrome Web Store publish configuration
+        env:
+          CHROME_WEB_STORE_CREDENTIALS: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          [ -n "$CHROME_WEB_STORE_CREDENTIALS" ] || missing+=("secrets.CHROME_WEB_STORE_CREDENTIALS")
+          [ -n "$CHROME_WEB_STORE_EXTENSION_ID" ] || missing+=("vars.CHROME_WEB_STORE_EXTENSION_ID")
+          [ -n "$CHROME_WEB_STORE_PUBLISHER_ID" ] || missing+=("vars.CHROME_WEB_STORE_PUBLISHER_ID")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing Chrome Web Store CI configuration:\n' >&2
+            printf '  - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate for Chrome Web Store API
+        id: chrome-web-store-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          credentials_json: ${{ secrets.CHROME_WEB_STORE_CREDENTIALS }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Upload package to Chrome Web Store
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          fetch_response_file="$(mktemp)"
+          fetch_status_file="$(mktemp)"
+          fetch_stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file" "$fetch_response_file" "$fetch_status_file" "$fetch_stderr_file"' EXIT
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            -T bidi-release.zip \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:upload" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store upload HTTP status: $http_status"
+          echo "Chrome Web Store upload response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store upload stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store upload failed." >&2
+            exit 1
+          fi
+
+          max_attempts=30
+          sleep_seconds=10
+          attempt=1
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            fetch_curl_rc=0
+
+            curl \
+              --silent \
+              --show-error \
+              --output "$fetch_response_file" \
+              --write-out "%{http_code}" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:fetchStatus" \
+              > "$fetch_status_file" 2> "$fetch_stderr_file" || fetch_curl_rc=$?
+
+            fetch_http_status="$(cat "$fetch_status_file")"
+
+            echo "Chrome Web Store fetchStatus HTTP status: $fetch_http_status"
+            echo "Chrome Web Store fetchStatus response:"
+            cat "$fetch_response_file"
+            if [ -s "$fetch_stderr_file" ]; then
+              echo "Chrome Web Store fetchStatus stderr:"
+              cat "$fetch_stderr_file" >&2
+            fi
+
+            if [ "$fetch_curl_rc" -ne 0 ] || [ "$fetch_http_status" -lt 200 ] || [ "$fetch_http_status" -ge 300 ]; then
+              echo "Chrome Web Store fetchStatus failed." >&2
+              exit 1
+            fi
+
+            async_state="$(jq -r '.lastAsyncUploadState // empty' "$fetch_response_file")"
+
+            if [ -z "$async_state" ]; then
+              echo "Chrome Web Store fetchStatus did not include lastAsyncUploadState." >&2
+              exit 1
+            fi
+
+            echo "Chrome Web Store async upload state: $async_state (attempt $attempt/$max_attempts)"
+
+            case "$async_state" in
+              SUCCEEDED)
+                break
+                ;;
+              IN_PROGRESS)
+                if [ "$attempt" -eq "$max_attempts" ]; then
+                  echo "Chrome Web Store upload status polling timed out." >&2
+                  exit 1
+                fi
+                sleep "$sleep_seconds"
+                ;;
+              FAILED)
+                echo "Chrome Web Store upload failed asynchronously." >&2
+                exit 1
+                ;;
+              *)
+                echo "Unexpected Chrome Web Store async upload state: $async_state" >&2
+                exit 1
+                ;;
+            esac
+
+            attempt=$((attempt + 1))
+          done
+
+      - name: Submit Chrome Web Store release for review
+        env:
+          ACCESS_TOKEN: ${{ steps.chrome-web-store-auth.outputs.access_token }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          status_file="$(mktemp)"
+          stderr_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$status_file" "$stderr_file"' EXIT
+          curl_rc=0
+
+          curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -X POST \
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_WEB_STORE_PUBLISHER_ID}/items/${CHROME_WEB_STORE_EXTENSION_ID}:publish" \
+            > "$status_file" 2> "$stderr_file" || curl_rc=$?
+
+          http_status="$(cat "$status_file")"
+
+          echo "Chrome Web Store publish HTTP status: $http_status"
+          echo "Chrome Web Store publish response:"
+          cat "$response_file"
+          if [ -s "$stderr_file" ]; then
+            echo "Chrome Web Store publish stderr:"
+            cat "$stderr_file" >&2
+          fi
+
+          if [ "$curl_rc" -ne 0 ] || [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Chrome Web Store publish failed. The package may already be uploaded but remain unpublished. Check the Chrome Web Store Dashboard and resubmit or publish manually." >&2
+            exit 1
+          fi
