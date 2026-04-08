@@ -62,7 +62,7 @@ BiDi adds a small, powerful popup to your browser that lets you fix text directi
 
 **Privacy**
 
-BiDi collects no personal data. Your per-site settings are stored using Chrome's built-in chrome.storage.sync API (synced via your Google account). No analytics, no tracking, no external servers contacted. Full privacy policy: https://ekrako.github.io/bidi/privacy.html
+BiDi collects no personal data. Your per-site settings are stored using Chrome's built-in chrome.storage.sync API (synced via your Google account). No analytics, no tracking, no external servers contacted. Full privacy policy: https://bidi.krakovsky.info/privacy.html
 
 **Open Source**
 
@@ -74,8 +74,8 @@ BiDi is MIT licensed and fully open source. View the source code, report issues,
 
 | Field            | Value                                      |
 |------------------|--------------------------------------------|
-| Homepage         | https://ekrako.github.io/bidi/             |
-| Privacy Policy   | https://ekrako.github.io/bidi/privacy.html |
+| Homepage         | https://bidi.krakovsky.info/               |
+| Privacy Policy   | https://bidi.krakovsky.info/privacy.html   |
 | Support          | https://github.com/ekrako/bidi/issues      |
 
 ---

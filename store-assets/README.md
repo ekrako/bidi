@@ -34,7 +34,7 @@ CHROME_PATH="/path/to/Google Chrome" bun store-assets/capture.ts
 ## Privacy policy
 
 `docs/privacy.html` is deployed via GitHub Pages at:
-https://ekrako.github.io/bidi/privacy.html
+https://bidi.krakovsky.info/privacy.html
 
 ## Submission checklist
 
@@ -44,6 +44,6 @@ https://ekrako.github.io/bidi/privacy.html
 - [ ] Fill in the store listing using `store-listing.md`
 - [ ] Upload screenshots: `output/screenshot-1.png`, `screenshot-2.png`, `screenshot-3.png`
 - [ ] Upload promo tile: `output/promo-small.png` (optional but recommended)
-- [ ] Set Privacy Policy URL: `https://ekrako.github.io/bidi/privacy.html`
+- [ ] Set Privacy Policy URL: `https://bidi.krakovsky.info/privacy.html`
 - [ ] Select category: **Accessibility**
 - [ ] Submit for review
