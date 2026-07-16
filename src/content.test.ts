@@ -913,6 +913,27 @@ describe("editable-subtree skip", () => {
     expect(block.style.direction).toBe("");
     expect(block.hasAttribute(MARKER)).toBe(false);
   });
+
+  test("applyRtlToElement no-ops when the element itself is the editable host", () => {
+    // Not just a descendant — the host element passed directly should also
+    // be left untouched (and stripped if previously marked).
+    const editor = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(editor);
+    applyRtlToElement(editor);
+    expect(editor.style.direction).toBe("rtl");
+
+    editor.setAttribute("contenteditable", "true");
+    applyRtlToElement(editor);
+
+    expect(editor.style.direction).toBe("");
+    expect(editor.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("onMutations handles a characterData mutation on a detached text node", () => {
+    const detached = document.createTextNode("שלום עולם");
+    // No parentElement — must not throw and must have no effect.
+    expect(() => onMutations([charDataRecord(detached)])).not.toThrow();
+  });
 });
 
 // ---------- circuit breaker ----------
@@ -1116,6 +1137,25 @@ describe("circuit breaker", () => {
 
     expect(block.style.direction).toBe("rtl");
     expect(block.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("reconfiguring after permanent disable does not revive the observer", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 1, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // A generous new config (e.g. from a storage sync update) must not
+    // un-disable a page that already tripped out permanently.
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 1000, maxTrips: 1000 });
+    startObserver();
+
+    expect(isObserving()).toBe(false);
+    warn.mockRestore();
   });
 
   test("stopObserver cancels a pending reconnect (no resurrection after mode switch)", async () => {

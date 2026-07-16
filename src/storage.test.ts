@@ -115,3 +115,17 @@ test("getBreakerConfig falls back per-field for invalid values", async () => {
     maxTrips: DEFAULT_BREAKER_CONFIG.maxTrips,
   });
 });
+
+test("getBreakerConfig falls back for negative and non-finite values", async () => {
+  store.breaker = { maxCallbacks: -5, cooldownMs: Infinity, maxTrips: NaN };
+  expect(await getBreakerConfig()).toEqual(DEFAULT_BREAKER_CONFIG);
+});
+
+test("getBreakerConfig defaults fields that are absent from a partial override", async () => {
+  store.breaker = { maxCallbacks: 7 };
+  expect(await getBreakerConfig()).toEqual({
+    maxCallbacks: 7,
+    cooldownMs: DEFAULT_BREAKER_CONFIG.cooldownMs,
+    maxTrips: DEFAULT_BREAKER_CONFIG.maxTrips,
+  });
+});
