@@ -1,4 +1,11 @@
-import { test, expect, beforeEach, afterAll, describe } from "bun:test";
+import {
+  test,
+  expect,
+  beforeEach,
+  afterAll,
+  describe,
+  spyOn,
+} from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 // Register DOM globals (document, HTMLElement, Node, etc.)
@@ -21,13 +28,54 @@ afterAll(async () => {
   },
 };
 
+const { DEFAULT_BREAKER_CONFIG } = await import("./storage");
+
 const {
   MARKER,
   getInlineText,
   applyRtlToElement,
   scanForRtl,
   clearAutoDirection,
+  isInsideEditable,
+  onMutations,
+  startObserver,
+  stopObserver,
+  setBreakerConfig,
+  resetBreaker,
+  rearmBreaker,
+  isObserving,
 } = await import("./content");
+
+const DEFAULT_TEST_BREAKER = { ...DEFAULT_BREAKER_CONFIG };
+
+/** Minimal MutationRecord stand-ins for driving onMutations() directly. */
+function childListRecord(target: Node, added: Node[] = []): MutationRecord {
+  return {
+    type: "childList",
+    target,
+    addedNodes: added as unknown as NodeList,
+    removedNodes: [] as unknown as NodeList,
+  } as unknown as MutationRecord;
+}
+
+function charDataRecord(target: Node): MutationRecord {
+  return {
+    type: "characterData",
+    target,
+    addedNodes: [] as unknown as NodeList,
+    removedNodes: [] as unknown as NodeList,
+  } as unknown as MutationRecord;
+}
+
+function attrRecord(target: Node, attributeName: string): MutationRecord {
+  return {
+    type: "attributes",
+    target,
+    attributeName,
+    addedNodes: [] as unknown as NodeList,
+    removedNodes: [] as unknown as NodeList,
+  } as unknown as MutationRecord;
+}
 
 function html(tag: string, children: (string | HTMLElement)[] = []): HTMLElement {
   const el = document.createElement(tag);
@@ -83,6 +131,21 @@ describe("getInlineText", () => {
       " world",
     ]);
     expect(getInlineText(div)).toBe("Hello עולם world");
+  });
+
+  test("excludes text of an inline contenteditable child", () => {
+    const span = html("span", ["שלום עולם כיתוב בעברית ארוך"]);
+    span.setAttribute("contenteditable", "true");
+    const p = html("p", ["English text ", span]);
+    expect(getInlineText(p)).toBe("English text ");
+  });
+
+  test("excludes a contenteditable nested under an inline wrapper", () => {
+    const editor = html("span", ["שלום עולם כיתוב בעברית ארוך"]);
+    editor.setAttribute("contenteditable", "true");
+    const wrapper = html("span", ["mid ", editor]);
+    const p = html("p", ["hi ", wrapper]);
+    expect(getInlineText(p)).toBe("hi mid ");
   });
 });
 
@@ -553,5 +616,528 @@ describe("clearAutoDirection", () => {
     clearAutoDirection();
 
     expect(div.style.direction).toBe("ltr");
+  });
+});
+
+// ---------- isInsideEditable ----------
+
+describe("isInsideEditable", () => {
+  test("true for element inside a contenteditable host", () => {
+    const editor = html("div", [html("p", ["שלום"])]);
+    editor.setAttribute("contenteditable", "");
+    document.body.appendChild(editor);
+    expect(isInsideEditable(editor.querySelector("p"))).toBe(true);
+  });
+
+  test("treats contenteditable='true' as editable", () => {
+    const editor = html("div", [html("span", ["שלום"])]);
+    editor.setAttribute("contenteditable", "true");
+    document.body.appendChild(editor);
+    expect(isInsideEditable(editor.querySelector("span"))).toBe(true);
+  });
+
+  test("false for element outside any editable region", () => {
+    const div = html("div", ["שלום"]);
+    document.body.appendChild(div);
+    expect(isInsideEditable(div)).toBe(false);
+  });
+
+  test("standalone contenteditable='false' element is not editable", () => {
+    const island = html("div", [html("span", ["שלום"])]);
+    island.setAttribute("contenteditable", "false");
+    document.body.appendChild(island);
+    expect(isInsideEditable(island.querySelector("span"))).toBe(false);
+  });
+
+  test.each(["inherit", "foo", "FALSE"])(
+    "contenteditable='%s' does not establish an editable host",
+    (value) => {
+      const el = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+      el.setAttribute("contenteditable", value);
+      document.body.appendChild(el);
+      expect(isInsideEditable(el)).toBe(false);
+    },
+  );
+
+  test.each(["", "true", "plaintext-only", "TRUE"])(
+    "contenteditable='%s' establishes an editable host",
+    (value) => {
+      const el = html("div", [html("span", ["שלום"])]);
+      el.setAttribute("contenteditable", value);
+      document.body.appendChild(el);
+      expect(isInsideEditable(el.querySelector("span"))).toBe(true);
+    },
+  );
+
+  test("contenteditable='false' island inside an editor is still skipped", () => {
+    // Editor-managed DOM: skip everything under an editable host, so scans and
+    // mutations stay consistent (no direction dependent on mutation timing).
+    const editor = html("div", [html("div", ["שלום"])]);
+    editor.setAttribute("contenteditable", "true");
+    const island = editor.querySelector("div") as HTMLElement;
+    island.setAttribute("contenteditable", "false");
+    document.body.appendChild(editor);
+    expect(isInsideEditable(island)).toBe(true);
+  });
+
+  test("falls back to isContentEditable for designMode-style editability", () => {
+    // No element carries a contenteditable attribute (document.designMode="on"
+    // makes the whole document editable). happy-dom doesn't reflect designMode
+    // into isContentEditable, so we stub the flag to assert the fallback branch.
+    const el = html("span", ["x"]);
+    document.body.appendChild(el);
+    expect(isInsideEditable(el)).toBe(false);
+    Object.defineProperty(el, "isContentEditable", {
+      value: true,
+      configurable: true,
+    });
+    expect(isInsideEditable(el)).toBe(true);
+  });
+});
+
+// ---------- Auto mode skips editable subtrees ----------
+
+describe("editable-subtree skip", () => {
+  test("applyRtlToElement no-ops inside contenteditable", () => {
+    const editor = html("div", [html("div", ["שלום עולם כיתוב בעברית"])]);
+    editor.setAttribute("contenteditable", "");
+    document.body.appendChild(editor);
+
+    const block = editor.querySelector("div") as HTMLElement;
+    applyRtlToElement(block);
+
+    expect(block.style.direction).toBe("");
+    expect(block.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("scanForRtl marks outside blocks but skips the editable subtree", () => {
+    const outside = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    const editor = html("div", [html("div", ["עוד טקסט עברי בתוך העורך"])]);
+    editor.setAttribute("contenteditable", "");
+    document.body.append(outside, editor);
+
+    scanForRtl(document.body);
+
+    expect(outside.style.direction).toBe("rtl");
+    const inner = editor.querySelector("div") as HTMLElement;
+    expect(inner.style.direction).toBe("");
+    expect(inner.hasAttribute(MARKER)).toBe(false);
+    expect(editor.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("observer ignores characterData mutations inside editable region", () => {
+    const editor = html("div", [html("p", ["שלום עולם כיתוב בעברית"])]);
+    editor.setAttribute("contenteditable", "");
+    document.body.appendChild(editor);
+    const p = editor.querySelector("p") as HTMLElement;
+
+    onMutations([charDataRecord(p.firstChild as Node)]);
+
+    expect(p.style.direction).toBe("");
+    expect(p.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("clears stale markers when an element becomes editable", () => {
+    const div = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(div);
+    applyRtlToElement(div);
+    expect(div.style.direction).toBe("rtl");
+    expect(div.hasAttribute(MARKER)).toBe(true);
+
+    div.setAttribute("contenteditable", "");
+    applyRtlToElement(div);
+
+    expect(div.style.direction).toBe("");
+    expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("clears marked descendants when an ancestor becomes editable", () => {
+    // LTR-dominant block so the inline Hebrew span gets its own plaintext marker.
+    const host = html("p", [
+      "The vendor said ",
+      html("em", ["שלום"]),
+      " and walked away into the evening light of the old city.",
+    ]);
+    document.body.appendChild(host);
+    scanForRtl(host);
+    const em = host.querySelector("em") as HTMLElement;
+    expect(em.hasAttribute(MARKER)).toBe(true);
+    expect(em.style.unicodeBidi).toBe("plaintext");
+
+    host.setAttribute("contenteditable", "");
+    applyRtlToElement(host);
+
+    expect(em.style.unicodeBidi).toBe("");
+    expect(em.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("observer clears markers when a block gains contenteditable", () => {
+    const block = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(block);
+    applyRtlToElement(block);
+    expect(block.hasAttribute(MARKER)).toBe(true);
+
+    block.setAttribute("contenteditable", "");
+    onMutations([attrRecord(block, "contenteditable")]);
+
+    expect(block.style.direction).toBe("");
+    expect(block.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("observer scans an element that stops being editable", () => {
+    const el = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    el.setAttribute("contenteditable", "true");
+    document.body.appendChild(el);
+
+    el.setAttribute("contenteditable", "false");
+    onMutations([attrRecord(el, "contenteditable")]);
+
+    expect(el.style.direction).toBe("rtl");
+    expect(el.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("observer re-evaluates the block when an inline stops being editable", () => {
+    const p = html("p", ["English words here "]);
+    const span = html("span", ["שלום"]);
+    span.setAttribute("contenteditable", "true");
+    p.appendChild(span);
+    document.body.appendChild(p);
+    scanForRtl(document.body);
+    expect(p.style.direction).toBe("");
+
+    // Editing turned it RTL-majority, then it froze to static content.
+    span.textContent = "שלום עולם כיתוב בעברית ארוך מאוד מאוד";
+    span.setAttribute("contenteditable", "false");
+    onMutations([attrRecord(span, "contenteditable")]);
+
+    expect(p.style.direction).toBe("rtl");
+  });
+
+  test("editor's text does not drive its parent block's direction", () => {
+    const span = html("span", ["שלום עולם כיתוב בעברית ארוך מאוד"]);
+    span.setAttribute("contenteditable", "true");
+    const p = html("p", ["Short en ", span]);
+    document.body.appendChild(p);
+
+    scanForRtl(document.body);
+
+    // Parent stays LTR despite the editor holding RTL-majority text.
+    expect(p.style.direction).toBe("");
+    expect(p.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("parent block re-evaluates when an inline child becomes editable", () => {
+    // Parent is RTL because it (wrongly) includes the child's Hebrew before the
+    // child is marked editable; once editable, the parent must drop RTL.
+    const span = html("span", ["שלום עולם כיתוב בעברית ארוך מאוד מאוד"]);
+    const p = html("p", ["hi ", span]);
+    document.body.appendChild(p);
+    scanForRtl(document.body);
+    expect(p.style.direction).toBe("rtl");
+
+    span.setAttribute("contenteditable", "true");
+    onMutations([attrRecord(span, "contenteditable")]);
+
+    expect(p.style.direction).toBe("");
+    expect(p.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("scanForRtl processes a standalone contenteditable='inherit' element", () => {
+    const el = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    el.setAttribute("contenteditable", "inherit");
+    document.body.appendChild(el);
+
+    scanForRtl(document.body);
+
+    expect(el.style.direction).toBe("rtl");
+    expect(el.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("full scan clears stale markers left inside an existing editor", () => {
+    // Simulates a prior content-script injection that marked content before the
+    // element became editor-owned; a fresh scan must clean it up.
+    const editor = html("div", [html("p", ["שלום עולם"])]);
+    editor.setAttribute("contenteditable", "true");
+    document.body.appendChild(editor);
+    const p = editor.querySelector("p") as HTMLElement;
+    p.style.direction = "rtl";
+    p.setAttribute(MARKER, "");
+
+    scanForRtl(document.body);
+
+    expect(p.style.direction).toBe("");
+    expect(p.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("scanForRtl clears stale markers on an editable root", () => {
+    const marked = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(marked);
+    applyRtlToElement(marked);
+    expect(marked.hasAttribute(MARKER)).toBe(true);
+
+    // Becomes editor-owned, then gets scanned as an added subtree.
+    marked.setAttribute("contenteditable", "true");
+    scanForRtl(marked);
+
+    expect(marked.style.direction).toBe("");
+    expect(marked.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("observer strips markers from a node reparented into an editor", () => {
+    const editor = html("div");
+    editor.setAttribute("contenteditable", "");
+    document.body.appendChild(editor);
+
+    const marked = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(marked);
+    applyRtlToElement(marked);
+    expect(marked.hasAttribute(MARKER)).toBe(true);
+
+    // Moved into the editor; childList mutation targets the editor host.
+    editor.appendChild(marked);
+    onMutations([childListRecord(editor, [marked])]);
+
+    expect(marked.style.direction).toBe("");
+    expect(marked.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("observer ignores childList mutations inside editable region", () => {
+    const editor = html("div");
+    editor.setAttribute("contenteditable", "");
+    const block = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    editor.appendChild(block);
+    document.body.appendChild(editor);
+
+    onMutations([childListRecord(block, [block.firstChild as Node])]);
+
+    expect(block.style.direction).toBe("");
+    expect(block.hasAttribute(MARKER)).toBe(false);
+  });
+});
+
+// ---------- circuit breaker ----------
+
+describe("circuit breaker", () => {
+  beforeEach(() => {
+    stopObserver();
+    setBreakerConfig(DEFAULT_TEST_BREAKER);
+    resetBreaker();
+  });
+
+  afterAll(() => {
+    stopObserver();
+    setBreakerConfig(DEFAULT_TEST_BREAKER);
+    resetBreaker();
+  });
+
+  test("trips and disconnects after exceeding callback budget", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 3, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+    expect(isObserving()).toBe(true);
+
+    for (let i = 0; i < 4; i++) onMutations([]);
+
+    expect(isObserving()).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  test("stays disconnected permanently once maxTrips reached", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 1, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // Reconnect attempts are refused after permanent disable.
+    startObserver();
+    expect(isObserving()).toBe(false);
+    warn.mockRestore();
+  });
+
+  test("permanent disable survives a mode re-arm (cannot be toggled back on)", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 1, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // Simulates auto→rtl→auto: applyMode re-arms rather than fully resetting, so
+    // the per-page trip-out must persist and refuse to reconnect.
+    rearmBreaker();
+    startObserver();
+    expect(isObserving()).toBe(false);
+    warn.mockRestore();
+  });
+
+  test("reconnects after cooldown when trips remain", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({
+      ...DEFAULT_TEST_BREAKER,
+      maxCallbacks: 2,
+      maxTrips: 5,
+      cooldownMs: 20,
+    });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    await new Promise((r) => setTimeout(r, 60));
+    expect(isObserving()).toBe(true);
+
+    stopObserver();
+    warn.mockRestore();
+  });
+
+  test("rescans DOM added during cooldown on reconnect", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({
+      ...DEFAULT_TEST_BREAKER,
+      maxCallbacks: 1,
+      maxTrips: 5,
+      cooldownMs: 20,
+    });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // Content appears while the observer is backed off; its mutation is lost.
+    const late = html("div", ["שלום עולם כיתוב בעברית ארוך מאוד"]);
+    document.body.appendChild(late);
+
+    await new Promise((r) => setTimeout(r, 60));
+
+    expect(isObserving()).toBe(true);
+    expect(late.style.direction).toBe("rtl");
+
+    stopObserver();
+    warn.mockRestore();
+  });
+
+  test("DOM-fighting editor cannot cause a runaway; observer backs off", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({
+      ...DEFAULT_TEST_BREAKER,
+      maxCallbacks: 8,
+      maxTrips: 1,
+    });
+    resetBreaker();
+
+    // Non-editable block so Layer 1 (editable skip) does NOT apply — this
+    // exercises the breaker itself. A fake editor reverts our marker and
+    // re-renders (childList) whenever it sees BiDi touch its DOM, mirroring
+    // ProseMirror's normalize-on-mutation behavior.
+    const block = html("div", ["שלום עולם כיתוב בעברית ארוך מאוד"]);
+    document.body.appendChild(block);
+
+    let reRenders = 0;
+    const fakeEditor = new MutationObserver(() => {
+      if (!block.hasAttribute(MARKER) && !block.style.direction) return;
+      reRenders++;
+      block.removeAttribute(MARKER);
+      block.style.direction = "";
+      block.style.unicodeBidi = "";
+      block.appendChild(document.createTextNode(""));
+    });
+    fakeEditor.observe(block, {
+      attributes: true,
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+
+    startObserver();
+    block.appendChild(document.createTextNode(" עוד"));
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    fakeEditor.disconnect();
+    expect(isObserving()).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    // Bounded: re-renders capped near the callback budget, not runaway.
+    expect(reRenders).toBeLessThan(100);
+
+    warn.mockRestore();
+  });
+
+  test("trips on a non-yielding burst regardless of elapsed wall-clock", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    // Synchronous back-to-back calls = no macrotask (yield timer) runs between
+    // them, so the burst count accumulates and trips no matter the rate.
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 5, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+
+    for (let i = 0; i < 10 && isObserving(); i++) onMutations([]);
+
+    expect(isObserving()).toBe(false);
+    warn.mockRestore();
+  });
+
+  test("does not trip when the event loop yields between callbacks", async () => {
+    // A legitimately busy page yields to the event loop between mutations. The
+    // yield timer fires each time, resetting the burst, so it never trips even
+    // across far more callbacks than maxCallbacks.
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 3 });
+    resetBreaker();
+    startObserver();
+
+    for (let i = 0; i < 12; i++) {
+      onMutations([]);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    expect(isObserving()).toBe(true);
+    stopObserver();
+  });
+
+  test("processes under-budget mutations (positive path via onMutations)", () => {
+    setBreakerConfig(DEFAULT_TEST_BREAKER);
+    resetBreaker();
+    const block = html("div", ["שלום עולם כיתוב בעברית ארוך"]);
+    document.body.appendChild(block);
+
+    onMutations([childListRecord(block, [block.firstChild as Node])]);
+
+    expect(block.style.direction).toBe("rtl");
+    expect(block.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("stopObserver cancels a pending reconnect (no resurrection after mode switch)", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({
+      ...DEFAULT_TEST_BREAKER,
+      maxCallbacks: 1,
+      maxTrips: 5,
+      cooldownMs: 20,
+    });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // Simulates the user switching the site away from Auto during cooldown.
+    stopObserver();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(isObserving()).toBe(false);
+
+    warn.mockRestore();
   });
 });

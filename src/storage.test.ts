@@ -4,6 +4,8 @@ import {
   setSiteMode,
   getAutoByDefault,
   setAutoByDefault,
+  getBreakerConfig,
+  DEFAULT_BREAKER_CONFIG,
   type DirectionMode,
 } from "./storage";
 
@@ -90,4 +92,26 @@ test("explicit site mode overrides autoByDefault", async () => {
 
 test("getAutoByDefault returns true by default", async () => {
   expect(await getAutoByDefault()).toBe(true);
+});
+
+test("getBreakerConfig returns defaults when unset", async () => {
+  expect(await getBreakerConfig()).toEqual(DEFAULT_BREAKER_CONFIG);
+});
+
+test("getBreakerConfig applies stored overrides", async () => {
+  store.breaker = { maxCallbacks: 10, cooldownMs: 100, maxTrips: 2 };
+  expect(await getBreakerConfig()).toEqual({
+    maxCallbacks: 10,
+    cooldownMs: 100,
+    maxTrips: 2,
+  });
+});
+
+test("getBreakerConfig falls back per-field for invalid values", async () => {
+  store.breaker = { maxCallbacks: 42, cooldownMs: "nope", maxTrips: 0 };
+  expect(await getBreakerConfig()).toEqual({
+    maxCallbacks: 42,
+    cooldownMs: DEFAULT_BREAKER_CONFIG.cooldownMs,
+    maxTrips: DEFAULT_BREAKER_CONFIG.maxTrips,
+  });
 });
