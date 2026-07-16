@@ -2,6 +2,9 @@ import {
   getSiteMode,
   getBreakerConfig,
   DEFAULT_BREAKER_CONFIG,
+  STORAGE_KEY,
+  DEFAULT_KEY,
+  BREAKER_KEY,
   type DirectionMode,
   type BreakerConfig,
 } from "./storage";
@@ -73,9 +76,13 @@ function isEditableHost(el: HTMLElement): boolean {
  * (it's editor-managed DOM), which keeps this consistent with `scanForRtl`'s
  * subtree pruning; a standalone `contenteditable="false"` element with no
  * editable ancestor is treated as normal content. Falls back to
- * `el.isContentEditable` when no ancestor is an editable host — that flag is
- * unreliable outside real browsers (e.g. happy-dom returns false) and, in a
- * browser, catches inherited editability via `designMode`.
+ * `el.isContentEditable` when no ancestor is an editable host. That flag is the
+ * only signal for document-wide editability via `document.designMode = "on"`,
+ * where no element carries a `contenteditable` attribute yet the whole document
+ * is editable; the attribute walk alone would miss it. The flag is unreliable
+ * outside real browsers (e.g. happy-dom returns false regardless of
+ * `designMode`), so the attribute walk is the primary path and this fallback
+ * only adds coverage where the flag is trustworthy.
  */
 export function isInsideEditable(el: HTMLElement | null): boolean {
   for (let cur = el; cur; cur = cur.parentElement) {
@@ -298,88 +305,133 @@ function reactToMutations(mutations: MutationRecord[]) {
 // trip we disconnect, warn, and back off, disabling permanently after repeated
 // trips. The initial full scan is exempt (not routed through onMutations).
 
-let breakerConfig: BreakerConfig = { ...DEFAULT_BREAKER_CONFIG };
-let callbacksSinceYield = 0;
-let tripCount = 0;
-let breakerDisabled = false;
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let yieldPending = false;
-let yieldChannel: MessageChannel | null = null;
+/**
+ * All circuit-breaker state and transitions in one place: config, the
+ * non-yielding burst counter, trip/cooldown/permanent-disable lifecycle, and the
+ * MessageChannel yield beacon. The observer wiring only asks `shouldProcess()`.
+ */
+class MutationBreaker {
+  private config: BreakerConfig = { ...DEFAULT_BREAKER_CONFIG };
+  private callbacksSinceYield = 0;
+  private tripCount = 0;
+  private disabled = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private yieldPending = false;
+  private yieldChannel: MessageChannel | null = null;
+
+  setConfig(config: BreakerConfig) {
+    this.config = { ...config };
+  }
+
+  isDisabled(): boolean {
+    return this.disabled;
+  }
+
+  /** Full reset for a fresh page/session: clears counters, cooldown, and the
+   * permanent-disable flag. */
+  reset() {
+    this.rearm();
+    this.disabled = false;
+  }
+
+  /** Re-arm on a mode transition into Auto: clear counters and any pending
+   * cooldown, but PRESERVE a permanent disable. A per-page trip-out must survive
+   * mode toggling (auto→rtl→auto) so it can't be bypassed — this matches the
+   * "disabled for this page" warning. A page reload constructs a fresh instance. */
+  rearm() {
+    this.cancel();
+    this.yieldPending = false;
+    this.callbacksSinceYield = 0;
+    this.tripCount = 0;
+  }
+
+  /** Cancel a pending cooldown reconnect (e.g. when the observer is stopped). */
+  cancel() {
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  /** Breaker gate for the observer callback: false means skip this batch (either
+   * permanently disabled, or the trip that just happened). */
+  shouldProcess(): boolean {
+    if (this.disabled) return false;
+    if (!this.overBudget()) return true;
+    this.trip();
+    return false;
+  }
+
+  private scheduleYieldBeacon() {
+    if (this.yieldPending) return;
+    this.yieldPending = true;
+    if (!this.yieldChannel) {
+      this.yieldChannel = new MessageChannel();
+      this.yieldChannel.port1.onmessage = () => {
+        this.yieldPending = false;
+        this.callbacksSinceYield = 0;
+      };
+    }
+    this.yieldChannel.port2.postMessage(0);
+  }
+
+  private overBudget(): boolean {
+    this.callbacksSinceYield += 1;
+    // Delivered only once the event loop drains its microtasks — i.e. the
+    // callback chain actually yielded. A starving feedback loop never lets it
+    // through.
+    this.scheduleYieldBeacon();
+    return this.callbacksSinceYield > this.config.maxCallbacks;
+  }
+
+  private trip() {
+    this.tripCount += 1;
+    stopObserver();
+    // Start the post-cooldown reconnect with a fresh count so a lingering value
+    // can't re-trip on the first callback.
+    this.yieldPending = false;
+    this.callbacksSinceYield = 0;
+    console.warn(
+      `[BiDi] Auto mode observer tripped circuit breaker (${this.tripCount}/${this.config.maxTrips}); backing off.`,
+    );
+    if (this.tripCount >= this.config.maxTrips) {
+      this.disabled = true;
+      console.warn(
+        "[BiDi] Auto mode disabled for this page after repeated observer overload.",
+      );
+      return;
+    }
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.disabled) return;
+      // Catch up on anything added while disconnected before resuming. A mode
+      // switch away from Auto cancels this timer (via stopObserver), so reaching
+      // here means Auto is still active.
+      if (document.body) scanForRtl(document.body);
+      startObserver();
+    }, this.config.cooldownMs);
+  }
+}
+
+const breaker = new MutationBreaker();
 
 export function setBreakerConfig(config: BreakerConfig) {
-  breakerConfig = { ...config };
+  breaker.setConfig(config);
 }
 
-function clearReconnect() {
-  if (reconnectTimer !== null) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-}
-
-function scheduleYieldBeacon() {
-  if (yieldPending) return;
-  yieldPending = true;
-  if (!yieldChannel) {
-    yieldChannel = new MessageChannel();
-    yieldChannel.port1.onmessage = () => {
-      yieldPending = false;
-      callbacksSinceYield = 0;
-    };
-  }
-  yieldChannel.port2.postMessage(0);
-}
-
+/** Full breaker reset (fresh page/session): also clears a permanent disable. */
 export function resetBreaker() {
-  clearReconnect();
-  yieldPending = false;
-  callbacksSinceYield = 0;
-  tripCount = 0;
-  breakerDisabled = false;
+  breaker.reset();
 }
 
-function overBudget(): boolean {
-  callbacksSinceYield += 1;
-  // Delivered only once the event loop drains its microtasks — i.e. the callback
-  // chain actually yielded. A starving feedback loop never lets it through.
-  scheduleYieldBeacon();
-  return callbacksSinceYield > breakerConfig.maxCallbacks;
-}
-
-function tripBreaker() {
-  tripCount += 1;
-  stopObserver();
-  // Start the post-cooldown reconnect with a fresh count so a lingering value
-  // can't re-trip on the first callback.
-  yieldPending = false;
-  callbacksSinceYield = 0;
-  console.warn(
-    `[BiDi] Auto mode observer tripped circuit breaker (${tripCount}/${breakerConfig.maxTrips}); backing off.`,
-  );
-  if (tripCount >= breakerConfig.maxTrips) {
-    breakerDisabled = true;
-    console.warn(
-      "[BiDi] Auto mode disabled for this page after repeated observer overload.",
-    );
-    return;
-  }
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    if (breakerDisabled) return;
-    // Catch up on anything added while disconnected before resuming. A mode
-    // switch away from Auto cancels this timer (via stopObserver), so reaching
-    // here means Auto is still active.
-    if (document.body) scanForRtl(document.body);
-    startObserver();
-  }, breakerConfig.cooldownMs);
+/** Re-arm the breaker on a transition into Auto, preserving a permanent disable. */
+export function rearmBreaker() {
+  breaker.rearm();
 }
 
 /** Observer callback: breaker gate first, then the reaction. Exposed for tests. */
 export function onMutations(mutations: MutationRecord[]) {
-  if (overBudget()) {
-    tripBreaker();
-    return;
-  }
+  if (!breaker.shouldProcess()) return;
   reactToMutations(mutations);
 }
 
@@ -388,7 +440,7 @@ export function isObserving(): boolean {
 }
 
 export function startObserver() {
-  if (observer || breakerDisabled) return;
+  if (observer || breaker.isDisabled()) return;
   observer = new MutationObserver(onMutations);
   observer.observe(document.body, {
     childList: true,
@@ -402,7 +454,7 @@ export function startObserver() {
 }
 
 export function stopObserver() {
-  clearReconnect();
+  breaker.cancel();
   if (observer) {
     observer.disconnect();
     observer = null;
@@ -437,8 +489,9 @@ function applyMode(mode: DirectionMode) {
   }
   if (mode === "auto") {
     // Reached only on a real transition into Auto (same-mode calls return
-    // early), so a fresh page/session starts with a clean breaker.
-    resetBreaker();
+    // early). Re-arm — not full reset — so a page that already tripped out
+    // permanently can't be revived by toggling modes.
+    rearmBreaker();
     if (document.body) {
       scanForRtl(document.body);
       startObserver();
@@ -461,11 +514,14 @@ async function init() {
   applyMode(mode);
 }
 
-chrome.storage.onChanged.addListener(async (_changes, area) => {
+chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "sync") return;
-  setBreakerConfig(await getBreakerConfig());
-  const mode = await getSiteMode(location.hostname);
-  applyMode(mode);
+  // Only do the async work each key actually depends on: breaker config reloads
+  // on the breaker key; mode re-evaluates on the site map or the default toggle.
+  if (BREAKER_KEY in changes) setBreakerConfig(await getBreakerConfig());
+  if (STORAGE_KEY in changes || DEFAULT_KEY in changes) {
+    applyMode(await getSiteMode(location.hostname));
+  }
 });
 
 init();

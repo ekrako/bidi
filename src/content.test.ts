@@ -42,6 +42,7 @@ const {
   stopObserver,
   setBreakerConfig,
   resetBreaker,
+  rearmBreaker,
   isObserving,
 } = await import("./content");
 
@@ -678,6 +679,20 @@ describe("isInsideEditable", () => {
     document.body.appendChild(editor);
     expect(isInsideEditable(island)).toBe(true);
   });
+
+  test("falls back to isContentEditable for designMode-style editability", () => {
+    // No element carries a contenteditable attribute (document.designMode="on"
+    // makes the whole document editable). happy-dom doesn't reflect designMode
+    // into isContentEditable, so we stub the flag to assert the fallback branch.
+    const el = html("span", ["x"]);
+    document.body.appendChild(el);
+    expect(isInsideEditable(el)).toBe(false);
+    Object.defineProperty(el, "isContentEditable", {
+      value: true,
+      configurable: true,
+    });
+    expect(isInsideEditable(el)).toBe(true);
+  });
 });
 
 // ---------- Auto mode skips editable subtrees ----------
@@ -940,6 +955,24 @@ describe("circuit breaker", () => {
     expect(isObserving()).toBe(false);
 
     // Reconnect attempts are refused after permanent disable.
+    startObserver();
+    expect(isObserving()).toBe(false);
+    warn.mockRestore();
+  });
+
+  test("permanent disable survives a mode re-arm (cannot be toggled back on)", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    setBreakerConfig({ ...DEFAULT_TEST_BREAKER, maxCallbacks: 1, maxTrips: 1 });
+    resetBreaker();
+    startObserver();
+
+    onMutations([]);
+    onMutations([]);
+    expect(isObserving()).toBe(false);
+
+    // Simulates auto→rtl→auto: applyMode re-arms rather than fully resetting, so
+    // the per-page trip-out must persist and refuse to reconnect.
+    rearmBreaker();
     startObserver();
     expect(isObserving()).toBe(false);
     warn.mockRestore();

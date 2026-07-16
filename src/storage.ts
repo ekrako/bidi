@@ -1,8 +1,8 @@
 export type DirectionMode = "none" | "rtl" | "auto";
 
-const STORAGE_KEY = "sites";
-const DEFAULT_KEY = "autoByDefault";
-const BREAKER_KEY = "breaker";
+export const STORAGE_KEY = "sites";
+export const DEFAULT_KEY = "autoByDefault";
+export const BREAKER_KEY = "breaker";
 
 /** Circuit-breaker thresholds for the Auto-mode MutationObserver. */
 export interface BreakerConfig {
