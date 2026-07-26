@@ -196,13 +196,22 @@ export function applyRtlToElement(el: HTMLElement) {
   // English-dominant sentence. Correct it back to LTR. We only touch the
   // element's own marking — never inherited direction — so legitimate RTL
   // containers are left alone.
+  //
+  // Applying the correction overwrites an inline `direction:rtl` with our
+  // `ltr`, erasing the original site signal. So our own prior LTR correction
+  // (MARKER + inline `direction:ltr`) is itself treated as evidence the site
+  // forced RTL — otherwise a re-scan would unmark it and never re-detect the
+  // override. `!marked && direction === "rtl"` still excludes our stale *rtl*
+  // marker (RTL→LTR flip), which must be unmarked rather than corrected.
   const siteForcesRtl =
     el.getAttribute("dir")?.toLowerCase() === "rtl" ||
-    (!marked && el.style.direction === "rtl");
-  if (marked) unmarkElement(el);
+    (!marked && el.style.direction === "rtl") ||
+    (marked && el.style.direction === "ltr");
   if (siteForcesRtl) {
     markElement(el, "direction", "ltr");
     markElement(el, "textAlign", "left");
+  } else if (marked) {
+    unmarkElement(el);
   }
 }
 

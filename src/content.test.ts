@@ -250,6 +250,22 @@ describe("applyRtlToElement — block elements", () => {
     expect(p.style.textAlign).toBe("left");
   });
 
+  test("keeps LTR correction on a second pass when the site used inline direction:rtl", () => {
+    const p = html("p", ["שלום — mostly English content in this paragraph now"]);
+    p.style.direction = "rtl";
+    document.body.appendChild(p);
+
+    applyRtlToElement(p);
+    expect(p.style.direction).toBe("ltr");
+
+    // Second pass (e.g. a mutation re-scan): our correction overwrote the site's
+    // inline rtl, so this must not regress to unmarking it.
+    applyRtlToElement(p);
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+    expect(p.hasAttribute(MARKER)).toBe(true);
+  });
+
   test("leaves LTR-dominant block untouched when the site did not mark it", () => {
     const div = html("div", ["Hello world, mostly English עם קצת עברית here"]);
     document.body.appendChild(div);
