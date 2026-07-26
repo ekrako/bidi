@@ -227,6 +227,51 @@ describe("applyRtlToElement — block elements", () => {
     expect(p.style.direction).toBe("rtl");
   });
 
+  test("corrects LTR-dominant block that the site forced to RTL via dir=rtl (claude.ai pattern)", () => {
+    const p = html("p", [
+      "הכל תקין — the Hebrew and the digits both came through fine here",
+    ]);
+    p.setAttribute("dir", "rtl");
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+    expect(p.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("corrects LTR-dominant block the site forced to RTL via inline direction", () => {
+    const p = html("p", ["שלום — mostly English content in this paragraph now"]);
+    p.style.direction = "rtl";
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+  });
+
+  test("leaves LTR-dominant block untouched when the site did not mark it", () => {
+    const div = html("div", ["Hello world, mostly English עם קצת עברית here"]);
+    document.body.appendChild(div);
+    applyRtlToElement(div);
+
+    expect(div.style.direction).toBe("");
+    expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("does not correct LTR-dominant block whose RTL is only inherited", () => {
+    const parent = html("div", []);
+    parent.setAttribute("dir", "rtl");
+    const div = html("div", ["Hello world, mostly English עם קצת עברית here"]);
+    parent.appendChild(div);
+    document.body.appendChild(parent);
+    applyRtlToElement(div);
+
+    // The element itself carries no dir/inline direction — leave it alone.
+    expect(div.style.direction).toBe("");
+    expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
   test("removes direction when text changes from RTL to LTR", () => {
     const div = html("div", ["שלום עולם"]);
     document.body.appendChild(div);

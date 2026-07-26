@@ -179,14 +179,30 @@ export function applyRtlToElement(el: HTMLElement) {
     return;
   }
 
+  const marked = el.hasAttribute(MARKER);
+
   if (isRtlText(text)) {
     markElement(el, "direction", "rtl");
     // `direction:rtl` alone does not override a site's explicit
     // `text-align:left` (e.g. MUI/markdown CSS): runs reorder but the block
     // stays left-aligned. Force alignment so RTL content hugs the right.
     markElement(el, "textAlign", "right");
-  } else if (el.hasAttribute(MARKER)) {
-    unmarkElement(el);
+    return;
+  }
+
+  // LTR-dominant text that the *site itself* forced to RTL (a `dir="rtl"`
+  // attribute, or an inline `direction:rtl` we didn't write). Some apps set this
+  // per-paragraph off the first strong char (Hebrew), which mangles an
+  // English-dominant sentence. Correct it back to LTR. We only touch the
+  // element's own marking — never inherited direction — so legitimate RTL
+  // containers are left alone.
+  const siteForcesRtl =
+    el.getAttribute("dir")?.toLowerCase() === "rtl" ||
+    (!marked && el.style.direction === "rtl");
+  if (marked) unmarkElement(el);
+  if (siteForcesRtl) {
+    markElement(el, "direction", "ltr");
+    markElement(el, "textAlign", "left");
   }
 }
 
