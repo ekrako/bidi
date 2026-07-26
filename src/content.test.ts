@@ -209,6 +209,24 @@ describe("applyRtlToElement — block elements", () => {
     expect(li.style.direction).toBe("rtl");
   });
 
+  test("marks li/ul whose text lives in a block child so the bullet aligns RTL (OpenEvidence pattern)", () => {
+    // <ul><li><p>Hebrew</p></li></ul>: inline text of ul/li is empty, but the
+    // list marker must follow the inner block's RTL direction.
+    const p = html("p", ["לאחר מריחת משחה אנטיביוטית מקומית ניתן לכסות את הנגע"]);
+    const li = html("li", [p]);
+    const ul = html("ul", [li]);
+    document.body.appendChild(ul);
+
+    applyRtlToElement(ul);
+    applyRtlToElement(li);
+    applyRtlToElement(p);
+
+    expect(ul.style.direction).toBe("rtl");
+    expect(ul.style.textAlign).toBe("right");
+    expect(li.style.direction).toBe("rtl");
+    expect(p.style.direction).toBe("rtl");
+  });
+
   test("removes direction when text changes from RTL to LTR", () => {
     const div = html("div", ["שלום עולם"]);
     document.body.appendChild(div);

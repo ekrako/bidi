@@ -52,6 +52,12 @@ const INLINE_TAGS = new Set([
   "WBR",
 ]);
 
+// List containers hold their text in block children (e.g. `<li><p>…</p></li>`),
+// so getInlineText sees nothing and they'd never be marked — leaving the marker
+// (bullet/number) on the LTR side while the inner block reads RTL. Detect these
+// from their full descendant text instead.
+const LIST_TAGS = new Set(["UL", "OL", "LI"]);
+
 let currentMode: DirectionMode = "none";
 let observer: MutationObserver | null = null;
 
@@ -165,7 +171,9 @@ export function applyRtlToElement(el: HTMLElement) {
     return;
   }
 
-  const text = getInlineText(el);
+  const text = LIST_TAGS.has(el.tagName)
+    ? textExcludingEditable(el)
+    : getInlineText(el);
   if (text.trim().length === 0) {
     if (el.hasAttribute(MARKER)) unmarkElement(el);
     return;
