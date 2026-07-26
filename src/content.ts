@@ -93,7 +93,7 @@ export function isInsideEditable(el: HTMLElement | null): boolean {
 
 function markElement(
   el: HTMLElement,
-  prop: "direction" | "unicodeBidi",
+  prop: "direction" | "unicodeBidi" | "textAlign",
   value: string,
 ) {
   if (el.style[prop] !== value) el.style[prop] = value;
@@ -103,6 +103,7 @@ function markElement(
 function unmarkElement(el: HTMLElement) {
   el.style.direction = "";
   el.style.unicodeBidi = "";
+  el.style.textAlign = "";
   el.removeAttribute(MARKER);
 }
 
@@ -172,6 +173,10 @@ export function applyRtlToElement(el: HTMLElement) {
 
   if (isRtlText(text)) {
     markElement(el, "direction", "rtl");
+    // `direction:rtl` alone does not override a site's explicit
+    // `text-align:left` (e.g. MUI/markdown CSS): runs reorder but the block
+    // stays left-aligned. Force alignment so RTL content hugs the right.
+    markElement(el, "textAlign", "right");
   } else if (el.hasAttribute(MARKER)) {
     unmarkElement(el);
   }

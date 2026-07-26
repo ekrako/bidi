@@ -158,6 +158,7 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("rtl");
+    expect(div.style.textAlign).toBe("right");
     expect(div.hasAttribute(MARKER)).toBe(true);
   });
 
@@ -167,6 +168,7 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("");
+    expect(div.style.textAlign).toBe("");
     expect(div.hasAttribute(MARKER)).toBe(false);
   });
 
@@ -218,7 +220,18 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("");
+    expect(div.style.textAlign).toBe("");
     expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("forces text-align: right over a site's explicit text-align: left (OpenEvidence pattern)", () => {
+    const p = html("p", ["כן, מומלץ לכסות נגעי אימפטיגו פעילים כדי להפחית"]);
+    p.style.textAlign = "left";
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("rtl");
+    expect(p.style.textAlign).toBe("right");
   });
 
   test("clears stale RTL state when inline children are removed", () => {
