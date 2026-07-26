@@ -158,6 +158,7 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("rtl");
+    expect(div.style.textAlign).toBe("right");
     expect(div.hasAttribute(MARKER)).toBe(true);
   });
 
@@ -167,6 +168,7 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("");
+    expect(div.style.textAlign).toBe("");
     expect(div.hasAttribute(MARKER)).toBe(false);
   });
 
@@ -207,6 +209,85 @@ describe("applyRtlToElement — block elements", () => {
     expect(li.style.direction).toBe("rtl");
   });
 
+  test("marks li/ul whose text lives in a block child so the bullet aligns RTL (OpenEvidence pattern)", () => {
+    // <ul><li><p>Hebrew</p></li></ul>: inline text of ul/li is empty, but the
+    // list marker must follow the inner block's RTL direction.
+    const p = html("p", ["לאחר מריחת משחה אנטיביוטית מקומית ניתן לכסות את הנגע"]);
+    const li = html("li", [p]);
+    const ul = html("ul", [li]);
+    document.body.appendChild(ul);
+
+    applyRtlToElement(ul);
+    applyRtlToElement(li);
+    applyRtlToElement(p);
+
+    expect(ul.style.direction).toBe("rtl");
+    expect(ul.style.textAlign).toBe("right");
+    expect(li.style.direction).toBe("rtl");
+    expect(p.style.direction).toBe("rtl");
+  });
+
+  test("corrects LTR-dominant block that the site forced to RTL via dir=rtl (claude.ai pattern)", () => {
+    const p = html("p", [
+      "הכל תקין — the Hebrew and the digits both came through fine here",
+    ]);
+    p.setAttribute("dir", "rtl");
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+    expect(p.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("corrects LTR-dominant block the site forced to RTL via inline direction", () => {
+    const p = html("p", ["שלום — mostly English content in this paragraph now"]);
+    p.style.direction = "rtl";
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+  });
+
+  test("keeps LTR correction on a second pass when the site used inline direction:rtl", () => {
+    const p = html("p", ["שלום — mostly English content in this paragraph now"]);
+    p.style.direction = "rtl";
+    document.body.appendChild(p);
+
+    applyRtlToElement(p);
+    expect(p.style.direction).toBe("ltr");
+
+    // Second pass (e.g. a mutation re-scan): our correction overwrote the site's
+    // inline rtl, so this must not regress to unmarking it.
+    applyRtlToElement(p);
+    expect(p.style.direction).toBe("ltr");
+    expect(p.style.textAlign).toBe("left");
+    expect(p.hasAttribute(MARKER)).toBe(true);
+  });
+
+  test("leaves LTR-dominant block untouched when the site did not mark it", () => {
+    const div = html("div", ["Hello world, mostly English עם קצת עברית here"]);
+    document.body.appendChild(div);
+    applyRtlToElement(div);
+
+    expect(div.style.direction).toBe("");
+    expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("does not correct LTR-dominant block whose RTL is only inherited", () => {
+    const parent = html("div", []);
+    parent.setAttribute("dir", "rtl");
+    const div = html("div", ["Hello world, mostly English עם קצת עברית here"]);
+    parent.appendChild(div);
+    document.body.appendChild(parent);
+    applyRtlToElement(div);
+
+    // The element itself carries no dir/inline direction — leave it alone.
+    expect(div.style.direction).toBe("");
+    expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
   test("removes direction when text changes from RTL to LTR", () => {
     const div = html("div", ["שלום עולם"]);
     document.body.appendChild(div);
@@ -218,7 +299,18 @@ describe("applyRtlToElement — block elements", () => {
     applyRtlToElement(div);
 
     expect(div.style.direction).toBe("");
+    expect(div.style.textAlign).toBe("");
     expect(div.hasAttribute(MARKER)).toBe(false);
+  });
+
+  test("forces text-align: right over a site's explicit text-align: left (OpenEvidence pattern)", () => {
+    const p = html("p", ["כן, מומלץ לכסות נגעי אימפטיגו פעילים כדי להפחית"]);
+    p.style.textAlign = "left";
+    document.body.appendChild(p);
+    applyRtlToElement(p);
+
+    expect(p.style.direction).toBe("rtl");
+    expect(p.style.textAlign).toBe("right");
   });
 
   test("clears stale RTL state when inline children are removed", () => {

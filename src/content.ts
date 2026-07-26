@@ -52,6 +52,12 @@ const INLINE_TAGS = new Set([
   "WBR",
 ]);
 
+// List containers hold their text in block children (e.g. `<li><p>…</p></li>`),
+// so getInlineText sees nothing and they'd never be marked — leaving the marker
+// (bullet/number) on the LTR side while the inner block reads RTL. Detect these
+// from their full descendant text instead.
+const LIST_TAGS = new Set(["UL", "OL", "LI"]);
+
 let currentMode: DirectionMode = "none";
 let observer: MutationObserver | null = null;
 
@@ -93,7 +99,7 @@ export function isInsideEditable(el: HTMLElement | null): boolean {
 
 function markElement(
   el: HTMLElement,
-  prop: "direction" | "unicodeBidi",
+  prop: "direction" | "unicodeBidi" | "textAlign",
   value: string,
 ) {
   if (el.style[prop] !== value) el.style[prop] = value;
@@ -103,6 +109,7 @@ function markElement(
 function unmarkElement(el: HTMLElement) {
   el.style.direction = "";
   el.style.unicodeBidi = "";
+  el.style.textAlign = "";
   el.removeAttribute(MARKER);
 }
 
@@ -164,15 +171,46 @@ export function applyRtlToElement(el: HTMLElement) {
     return;
   }
 
-  const text = getInlineText(el);
+  const text = LIST_TAGS.has(el.tagName)
+    ? textExcludingEditable(el)
+    : getInlineText(el);
   if (text.trim().length === 0) {
     if (el.hasAttribute(MARKER)) unmarkElement(el);
     return;
   }
 
+  const marked = el.hasAttribute(MARKER);
+
   if (isRtlText(text)) {
     markElement(el, "direction", "rtl");
-  } else if (el.hasAttribute(MARKER)) {
+    // `direction:rtl` alone does not override a site's explicit
+    // `text-align:left` (e.g. MUI/markdown CSS): runs reorder but the block
+    // stays left-aligned. Force alignment so RTL content hugs the right.
+    markElement(el, "textAlign", "right");
+    return;
+  }
+
+  // LTR-dominant text that the *site itself* forced to RTL (a `dir="rtl"`
+  // attribute, or an inline `direction:rtl` we didn't write). Some apps set this
+  // per-paragraph off the first strong char (Hebrew), which mangles an
+  // English-dominant sentence. Correct it back to LTR. We only touch the
+  // element's own marking — never inherited direction — so legitimate RTL
+  // containers are left alone.
+  //
+  // Applying the correction overwrites an inline `direction:rtl` with our
+  // `ltr`, erasing the original site signal. So our own prior LTR correction
+  // (MARKER + inline `direction:ltr`) is itself treated as evidence the site
+  // forced RTL — otherwise a re-scan would unmark it and never re-detect the
+  // override. `!marked && direction === "rtl"` still excludes our stale *rtl*
+  // marker (RTL→LTR flip), which must be unmarked rather than corrected.
+  const siteForcesRtl =
+    el.getAttribute("dir")?.toLowerCase() === "rtl" ||
+    (!marked && el.style.direction === "rtl") ||
+    (marked && el.style.direction === "ltr");
+  if (siteForcesRtl) {
+    markElement(el, "direction", "ltr");
+    markElement(el, "textAlign", "left");
+  } else if (marked) {
     unmarkElement(el);
   }
 }
