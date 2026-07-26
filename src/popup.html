@@ -55,6 +55,39 @@
       .default-toggle input {
         margin: 0;
       }
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid #eee;
+        font-size: 11px;
+        color: #888;
+      }
+      .footer button {
+        flex: none;
+        padding: 3px 8px;
+        font-size: 11px;
+        color: #4a90d9;
+        border-color: #cfe0f2;
+      }
+      .footer button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      #reportStatus {
+        margin-top: 6px;
+        font-size: 11px;
+        min-height: 14px;
+        word-break: break-word;
+      }
+      #reportStatus.error {
+        color: #b00020;
+      }
+      #reportStatus.ok {
+        color: #1a7f37;
+      }
     </style>
   </head>
   <body>
@@ -64,6 +97,11 @@
       <input type="checkbox" id="autoDefault" />
       Auto by default
     </label>
+    <div class="footer">
+      <span>v<span id="version"></span></span>
+      <button id="reportBtn" type="button">Report an issue</button>
+    </div>
+    <div id="reportStatus"></div>
     <script src="popup.js"></script>
   </body>
 </html>

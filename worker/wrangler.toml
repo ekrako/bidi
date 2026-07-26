@@ -1,0 +1,12 @@
+name = "bidi-report"
+main = "index.ts"
+compatibility_date = "2025-07-01"
+
+# Public defaults; override per-environment as needed.
+[vars]
+GITHUB_OWNER = "ekrako"
+GITHUB_REPO = "bidi"
+# ALLOWED_ORIGIN = "chrome-extension://<your-extension-id>"
+
+# GITHUB_TOKEN is a secret, set via:
+#   wrangler secret put GITHUB_TOKEN

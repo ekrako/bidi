@@ -5,21 +5,65 @@ import {
   setAutoByDefault,
   type DirectionMode,
 } from "./storage";
+import { collectDom, submitReport } from "./report";
 
 const MODES: DirectionMode[] = ["none", "auto", "rtl"];
 
-async function getActiveTabHostname(): Promise<string | null> {
+async function getActiveTab(): Promise<{ id?: number; url?: string } | null> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) return null;
+  return tab ?? null;
+}
+
+function hostnameOf(url: string | undefined): string | null {
+  if (!url) return null;
   try {
-    return new URL(tab.url).hostname;
+    return new URL(url).hostname;
   } catch {
     return null;
   }
 }
 
+function setupReport() {
+  const btn = document.getElementById("reportBtn") as HTMLButtonElement;
+  const status = document.getElementById("reportStatus") as HTMLDivElement;
+  document.getElementById("version")!.textContent =
+    chrome.runtime.getManifest().version;
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    status.className = "";
+    status.textContent = "Collecting page…";
+    try {
+      const tab = await getActiveTab();
+      if (!tab?.id || !tab.url) throw new Error("No active tab to report");
+
+      const dom = await collectDom(tab.id);
+      status.textContent = "Creating issue…";
+      const { issueUrl } = await submitReport({
+        url: tab.url,
+        dom,
+        version: chrome.runtime.getManifest().version,
+        userAgent: navigator.userAgent,
+      });
+
+      status.className = "ok";
+      status.textContent = "Issue created — opening…";
+      await chrome.tabs.create({ url: issueUrl });
+    } catch (err) {
+      status.className = "error";
+      status.textContent =
+        err instanceof Error ? err.message : "Failed to report issue";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 async function init() {
-  const hostname = await getActiveTabHostname();
+  setupReport();
+
+  const tab = await getActiveTab();
+  const hostname = hostnameOf(tab?.url);
   const hostnameEl = document.getElementById("hostname") as HTMLSpanElement;
   const buttonsEl = document.getElementById("buttons") as HTMLDivElement;
 
