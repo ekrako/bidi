@@ -41,3 +41,7 @@ store-assets/output/
 
 # Claude setting
 .claude/settings.local.json
+
+# Cloudflare Wrangler
+worker/.wrangler
+worker/.dev.vars

@@ -25,6 +25,14 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin main
+
+          changed="$(git diff --name-only origin/main HEAD)"
+          if ! printf '%s\n' "$changed" | grep -Eq '^(src/|icons/)' && \
+             ! printf '%s\n' "$changed" | grep -Eq '^(manifest\.json|build\.ts|index\.ts|package\.json|package-lock\.json|bun\.lock|tsconfig\.json)$'; then
+            echo "No extension files changed (website/worker only); skipping version bump gate."
+            exit 0
+          fi
+
           base="$(git show origin/main:manifest.json | jq -r .version)"
           head="$(jq -r .version manifest.json)"
           highest="$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -n1)"
