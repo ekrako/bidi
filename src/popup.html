@@ -76,6 +76,18 @@
         opacity: 0.6;
         cursor: default;
       }
+      #reportDesc {
+        display: none;
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 8px;
+        padding: 6px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 12px;
+        resize: vertical;
+      }
       #reportStatus {
         margin-top: 6px;
         font-size: 11px;
@@ -101,6 +113,11 @@
       <span>v<span id="version"></span></span>
       <button id="reportBtn" type="button">Report an issue</button>
     </div>
+    <textarea
+      id="reportDesc"
+      rows="3"
+      placeholder="What's not working? (optional)"
+    ></textarea>
     <div id="reportStatus"></div>
     <script src="popup.js"></script>
   </body>

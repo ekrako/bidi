@@ -52,6 +52,22 @@ test("submitReport POSTs the payload and returns the issue URL", async () => {
   expect(JSON.parse(captured!.body)).toEqual(payload);
 });
 
+test("submitReport forwards an optional description", async () => {
+  let captured: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = { body: init.body as string };
+    return new Response(JSON.stringify({ issueUrl: "https://gh/issues/2" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await submitReport(
+    { ...payload, description: "text stays LTR" },
+    "https://backend/report",
+  );
+  expect(JSON.parse(captured!.body).description).toBe("text stays LTR");
+});
+
 test("submitReport throws on non-OK response", async () => {
   globalThis.fetch = (async () =>
     new Response("boom", { status: 502 })) as unknown as typeof fetch;

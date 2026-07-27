@@ -15,6 +15,8 @@ export interface ReportPayload {
   dom: string;
   version: string;
   userAgent: string;
+  /** Optional free-text description of what isn't working. */
+  description?: string;
 }
 
 export interface ReportResult {

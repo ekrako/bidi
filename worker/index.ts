@@ -4,7 +4,7 @@
  * A Cloudflare Worker that receives a report from the extension popup and
  * opens a GitHub issue on its behalf, keeping the GitHub token server-side.
  *
- * POST /report  { url, dom, version, userAgent } -> { issueUrl }
+ * POST /report  { url, dom, version, userAgent, description? } -> { issueUrl }
  */
 
 export interface Env {
@@ -23,6 +23,7 @@ interface ReportPayload {
   dom: string;
   version: string;
   userAgent: string;
+  description?: string;
 }
 
 // GitHub caps issue bodies at 65536 chars; leave room for surrounding markdown.
@@ -49,7 +50,8 @@ function isReportPayload(value: unknown): value is ReportPayload {
     typeof v?.url === "string" &&
     typeof v?.dom === "string" &&
     typeof v?.version === "string" &&
-    typeof v?.userAgent === "string"
+    typeof v?.userAgent === "string" &&
+    (v?.description === undefined || typeof v?.description === "string")
   );
 }
 
@@ -59,9 +61,12 @@ function buildIssueBody(p: ReportPayload): string {
       ? `${p.dom.slice(0, MAX_DOM_CHARS)}\n… [truncated ${p.dom.length - MAX_DOM_CHARS} chars]`
       : p.dom;
 
+  const description = p.description?.trim();
+
   return [
     "**Reported via the BiDi extension.**",
     "",
+    ...(description ? ["**What's not working:**", "", description, ""] : []),
     `- **URL:** ${p.url}`,
     `- **Extension version:** ${p.version}`,
     `- **User agent:** ${p.userAgent}`,

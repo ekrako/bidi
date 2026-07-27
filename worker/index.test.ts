@@ -83,6 +83,28 @@ test("valid report creates an issue and returns its URL", async () => {
   expect(issue.body).toContain("hello");
 });
 
+test("includes the user description in the issue body", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/9" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(
+    post({ ...validBody, description: "Headings render LTR" }),
+    env,
+  );
+  expect(issue!.body).toContain("What's not working");
+  expect(issue!.body).toContain("Headings render LTR");
+});
+
+test("rejects a non-string description", async () => {
+  const resp = await worker.fetch(post({ ...validBody, description: 5 }), env);
+  expect(resp.status).toBe(400);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
