@@ -34,6 +34,7 @@ function setupReport() {
     // First click reveals the description field; second click submits.
     if (desc.style.display !== "block") {
       desc.style.display = "block";
+      btn.setAttribute("aria-expanded", "true");
       desc.focus();
       btn.textContent = "Submit report";
       return;
