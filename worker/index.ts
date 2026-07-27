@@ -28,6 +28,7 @@ interface ReportPayload {
 
 // GitHub caps issue bodies at 65536 chars; leave room for surrounding markdown.
 const MAX_DOM_CHARS = 55000;
+const MAX_DESCRIPTION_CHARS = 2000;
 
 function corsHeaders(env: Env): Record<string, string> {
   return {
@@ -61,7 +62,7 @@ function buildIssueBody(p: ReportPayload): string {
       ? `${p.dom.slice(0, MAX_DOM_CHARS)}\n… [truncated ${p.dom.length - MAX_DOM_CHARS} chars]`
       : p.dom;
 
-  const description = p.description?.trim();
+  const description = p.description?.trim().slice(0, MAX_DESCRIPTION_CHARS);
 
   return [
     "**Reported via the BiDi extension.**",
