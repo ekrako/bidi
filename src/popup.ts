@@ -32,8 +32,8 @@ function setupReport() {
 
   btn.addEventListener("click", async () => {
     // First click reveals the description field; second click submits.
-    if (desc.style.display !== "block") {
-      desc.style.display = "block";
+    if (!desc.classList.contains("open")) {
+      desc.classList.add("open");
       btn.setAttribute("aria-expanded", "true");
       desc.focus();
       btn.textContent = "Submit report";
