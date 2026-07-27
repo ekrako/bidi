@@ -100,6 +100,33 @@ test("includes the user description in the issue body", async () => {
   expect(issue!.body).toContain("Headings render LTR");
 });
 
+test("trims surrounding whitespace from the description", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/11" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, description: "  text  " }), env);
+  expect(issue!.body).toContain("**What's not working:**\n\ntext\n");
+  expect(issue!.body).not.toContain("  text  ");
+});
+
+test("omits the section for a whitespace-only description", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/12" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, description: "   \n  " }), env);
+  expect(issue!.body).not.toContain("What's not working");
+});
+
 test("bounds an oversized description", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
