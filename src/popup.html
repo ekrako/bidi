@@ -76,6 +76,21 @@
         opacity: 0.6;
         cursor: default;
       }
+      #reportDesc {
+        display: none;
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 8px;
+        padding: 6px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 12px;
+        resize: vertical;
+      }
+      #reportDesc.open {
+        display: block;
+      }
       #reportStatus {
         margin-top: 6px;
         font-size: 11px;
@@ -99,8 +114,22 @@
     </label>
     <div class="footer">
       <span>v<span id="version"></span></span>
-      <button id="reportBtn" type="button">Report an issue</button>
+      <button
+        id="reportBtn"
+        type="button"
+        aria-controls="reportDesc"
+        aria-expanded="false"
+      >
+        Report an issue
+      </button>
     </div>
+    <textarea
+      id="reportDesc"
+      rows="3"
+      maxlength="2000"
+      aria-label="Describe what's not working (optional)"
+      placeholder="What's not working? (optional)"
+    ></textarea>
     <div id="reportStatus"></div>
     <script src="popup.js"></script>
   </body>

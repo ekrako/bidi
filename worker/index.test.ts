@@ -83,6 +83,69 @@ test("valid report creates an issue and returns its URL", async () => {
   expect(issue.body).toContain("hello");
 });
 
+test("includes the user description in the issue body", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/9" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(
+    post({ ...validBody, description: "Headings render LTR" }),
+    env,
+  );
+  expect(issue!.body).toContain("What's not working");
+  expect(issue!.body).toContain("Headings render LTR");
+});
+
+test("trims surrounding whitespace from the description", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/11" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, description: "  text  " }), env);
+  expect(issue!.body).toContain("**What's not working:**\n\ntext\n");
+  expect(issue!.body).not.toContain("  text  ");
+});
+
+test("omits the section for a whitespace-only description", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/12" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, description: "   \n  " }), env);
+  expect(issue!.body).not.toContain("What's not working");
+});
+
+test("bounds an oversized description", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/10" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, description: "d".repeat(5000) }), env);
+  expect(issue!.body).toContain("d".repeat(2000));
+  expect(issue!.body).not.toContain("d".repeat(2001));
+});
+
+test("rejects a non-string description", async () => {
+  const resp = await worker.fetch(post({ ...validBody, description: 5 }), env);
+  expect(resp.status).toBe(400);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

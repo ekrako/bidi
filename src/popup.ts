@@ -26,10 +26,20 @@ function hostnameOf(url: string | undefined): string | null {
 function setupReport() {
   const btn = document.getElementById("reportBtn") as HTMLButtonElement;
   const status = document.getElementById("reportStatus") as HTMLDivElement;
+  const desc = document.getElementById("reportDesc") as HTMLTextAreaElement;
   document.getElementById("version")!.textContent =
     chrome.runtime.getManifest().version;
 
   btn.addEventListener("click", async () => {
+    // First click reveals the description field; second click submits.
+    if (!desc.classList.contains("open")) {
+      desc.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      desc.focus();
+      btn.textContent = "Submit report";
+      return;
+    }
+
     btn.disabled = true;
     status.className = "";
     status.textContent = "Collecting page…";
@@ -39,11 +49,13 @@ function setupReport() {
 
       const dom = await collectDom(tab.id);
       status.textContent = "Creating issue…";
+      const description = desc.value.trim();
       const { issueUrl } = await submitReport({
         url: tab.url,
         dom,
         version: chrome.runtime.getManifest().version,
         userAgent: navigator.userAgent,
+        ...(description ? { description } : {}),
       });
 
       status.className = "ok";
