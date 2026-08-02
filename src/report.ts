@@ -48,6 +48,8 @@ export function grabSanitizedHtml(): string {
     "PICTURE",
     "SOURCE",
     "IFRAME",
+    "AUDIO",
+    "VIDEO",
   ]);
   // Attributes worth keeping in full; everything else is length-capped.
   const KEPT_ATTRS = new Set([

@@ -177,6 +177,20 @@ test("keeps the end of an oversized DOM, not just its head", async () => {
   expect(issue!.body).toContain("truncated");
 });
 
+test("bounded DOM stays within the size cap", async () => {
+  let issue: { body: string } | null = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    issue = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://gh/issues/14" }), {
+      status: 201,
+    });
+  }) as unknown as typeof fetch;
+
+  await worker.fetch(post({ ...validBody, dom: "x".repeat(2_000_000) }), env);
+  const block = issue!.body.split("```html\n")[1]!.split("\n```")[0]!;
+  expect(block.length).toBeLessThanOrEqual(55000);
+});
+
 test("GitHub API failure returns 502", async () => {
   globalThis.fetch = (async () =>
     new Response("rate limited", { status: 403 })) as unknown as typeof fetch;

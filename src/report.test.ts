@@ -49,12 +49,15 @@ test("collectDom injects into the tab and returns outerHTML", async () => {
   expect((executeScriptCalls[0] as { target: { tabId: number } }).target.tabId).toBe(42);
 });
 
-test("grabSanitizedHtml drops script and style content", () => {
-  document.documentElement.innerHTML = `<head><style>.a{color:red}</style></head><body><script>var payload = "secret"</script><p dir="rtl">שלום</p></body>`;
+test("grabSanitizedHtml drops script, style and media content", () => {
+  document.documentElement.innerHTML = `<head><style>.a{color:red}</style></head><body><script>var payload = "secret"</script><audio src="a.mp3"><source src="a.ogg"></audio><video src="v.mp4"></video><p dir="rtl">שלום</p></body>`;
 
   const html = grabSanitizedHtml();
   expect(html).not.toContain("secret");
   expect(html).not.toContain("color:red");
+  expect(html).not.toContain("<audio");
+  expect(html).not.toContain("<video");
+  expect(html).not.toContain("a.ogg");
   expect(html).toContain('dir="rtl"');
   expect(html).toContain("שלום");
 });

@@ -63,10 +63,13 @@ function isReportPayload(value: unknown): value is ReportPayload {
 function boundDom(dom: string): string {
   if (dom.length <= MAX_DOM_CHARS) return dom;
 
-  const head = Math.floor(MAX_DOM_CHARS / 3);
-  const tail = MAX_DOM_CHARS - head;
-  const dropped = dom.length - MAX_DOM_CHARS;
-  return `${dom.slice(0, head)}\n… [truncated ${dropped} chars]\n${dom.slice(-tail)}`;
+  const marker = (dropped: number) => `\n… [truncated ${dropped} chars]\n`;
+  // `dropped` is always shorter than `dom.length`, so reserving on the latter
+  // keeps the joined result within the cap.
+  const budget = MAX_DOM_CHARS - marker(dom.length).length;
+  const head = Math.floor(budget / 3);
+  const tail = budget - head;
+  return `${dom.slice(0, head)}${marker(dom.length - budget)}${dom.slice(-tail)}`;
 }
 
 function buildIssueBody(p: ReportPayload): string {
