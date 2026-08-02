@@ -56,11 +56,24 @@ function isReportPayload(value: unknown): value is ReportPayload {
   );
 }
 
+/**
+ * Bounds the DOM from the middle: head-only truncation on a big SPA keeps
+ * `<head>` and drops every element the report is about.
+ */
+function boundDom(dom: string): string {
+  if (dom.length <= MAX_DOM_CHARS) return dom;
+
+  const marker = (dropped: number) => `\n… [truncated ${dropped} chars]\n`;
+  // `dropped` is always shorter than `dom.length`, so reserving on the latter
+  // keeps the joined result within the cap.
+  const budget = MAX_DOM_CHARS - marker(dom.length).length;
+  const head = Math.floor(budget / 3);
+  const tail = budget - head;
+  return `${dom.slice(0, head)}${marker(dom.length - budget)}${dom.slice(-tail)}`;
+}
+
 function buildIssueBody(p: ReportPayload): string {
-  const dom =
-    p.dom.length > MAX_DOM_CHARS
-      ? `${p.dom.slice(0, MAX_DOM_CHARS)}\n… [truncated ${p.dom.length - MAX_DOM_CHARS} chars]`
-      : p.dom;
+  const dom = boundDom(p.dom);
 
   const description = p.description?.trim().slice(0, MAX_DESCRIPTION_CHARS);
 
