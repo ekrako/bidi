@@ -20,6 +20,12 @@ function isLtrChar(c: number): boolean {
 const NEUTRAL_TOKEN_RE =
   /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+/gi;
 
+/**
+ * True when `text` reads right-to-left, by majority of directional letters.
+ *
+ * URL and email tokens are stripped before counting, so the returned direction
+ * reflects the prose only — offsets in `text` do not map to what was counted.
+ */
 export function isRtlText(text: string): boolean {
   const prose = text.replace(NEUTRAL_TOKEN_RE, " ");
   let rtl = 0;
