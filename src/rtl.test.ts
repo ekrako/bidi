@@ -21,6 +21,11 @@ describe("isRtlText", () => {
     ],
     ["שלום support@example.com עולם", true, "Hebrew with an email address"],
     ["שלום www.example.com/some/long/path", true, "Hebrew with a www URL"],
+    [
+      "כתבו לנו mailto:support@example.com?subject=hello",
+      true,
+      "Hebrew with a mailto: link",
+    ],
     ["https://github.com/llm-d/llm-d-router/issues/1950", false, "URL only"],
     [
       "Please open https://github.com/llm-d/llm-d-router/issues/1950 שלום",
