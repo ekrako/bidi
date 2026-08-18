@@ -12,12 +12,21 @@ function isLtrChar(c: number): boolean {
          (c >= 0xC0 && c <= 0x024F);
 }
 
+// URLs, emails and other machine tokens are always Latin regardless of the
+// prose around them, so counting their letters lets a single link outvote a
+// whole Hebrew sentence ("...רואים פתוח: https://github.com/llm-d/llm-d-router"
+// scored 39 LTR vs 39 RTL and rendered as LTR). They are direction-neutral
+// boilerplate for the reader, so drop them before counting.
+const NEUTRAL_TOKEN_RE =
+  /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+/gi;
+
 export function isRtlText(text: string): boolean {
+  const prose = text.replace(NEUTRAL_TOKEN_RE, " ");
   let rtl = 0;
   let ltr = 0;
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i);
+  for (let i = 0; i < prose.length; i++) {
+    const c = prose.charCodeAt(i);
     if (isRtlChar(c)) rtl++;
     else if (isLtrChar(c)) ltr++;
   }

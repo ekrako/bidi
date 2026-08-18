@@ -14,6 +14,19 @@ describe("isRtlText", () => {
     ["   \n\t  ", false, "whitespace only"],
     ["12345", false, "numbers only"],
     ["!@#$%^&*()", false, "punctuation only"],
+    [
+      "נראה שמצאתי issue שמתאים בדיוק למה שאנחנו רואים פתוח: https://github.com/llm-d/llm-d-router/issues/1950",
+      true,
+      "Hebrew sentence ending in a long URL",
+    ],
+    ["שלום support@example.com עולם", true, "Hebrew with an email address"],
+    ["שלום www.example.com/some/long/path", true, "Hebrew with a www URL"],
+    ["https://github.com/llm-d/llm-d-router/issues/1950", false, "URL only"],
+    [
+      "Please open https://github.com/llm-d/llm-d-router/issues/1950 שלום",
+      false,
+      "English sentence with a URL stays LTR",
+    ],
   ])("%s → %s (%s)", (input, expected) => {
     expect(isRtlText(input)).toBe(expected);
   });
