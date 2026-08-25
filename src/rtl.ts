@@ -22,9 +22,14 @@ function isLtrChar(c: number): boolean {
 // email branch (`\S+@…`) retries at every offset inside a long non-space run,
 // scanning to the end each time — quadratic, and enough to freeze a page that
 // carries a big minified inline script (a 270 KB one on amazon.fr blocked the
-// main thread for ~42s).
+// main thread for ~42s). Anchoring on punctuation instead (`(?<=[^\p{L}\p{N}_])`)
+// brings that back, since minified code is mostly punctuation: every `.`, `(` and
+// `;` becomes another start position.
+//
+// A leading `[\p{P}\p{S}]*` then lets the scheme branch reach a URL wrapped in
+// punctuation ("(https://example.com/a)") without adding start positions.
 const NEUTRAL_TOKEN_RE =
-  /(?<=^|\s)(?:(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+)/gi;
+  /(?<=^|\s)[\p{P}\p{S}]*(?:(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+)/giu;
 
 /**
  * True when `text` reads right-to-left, by majority of directional letters.

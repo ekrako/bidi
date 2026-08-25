@@ -129,8 +129,9 @@ function unmarkElement(el: HTMLElement) {
   el.removeAttribute(MARKER);
 }
 
-/** Concatenated text of `el`, excluding any contenteditable subtrees at any
- * depth — editor-owned text must not influence direction detection. */
+/** Concatenated text of `el`, excluding contenteditable subtrees and non-prose
+ * elements (`SKIP_TAGS`) at any depth — neither editor-owned text nor script or
+ * style source must influence direction detection. */
 function textExcludingEditable(el: HTMLElement): string {
   if (isEditableHost(el) || SKIP_TAGS.has(el.tagName)) return "";
   let text = "";

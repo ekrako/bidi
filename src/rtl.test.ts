@@ -28,6 +28,16 @@ describe("isRtlText", () => {
     ],
     ["https://github.com/llm-d/llm-d-router/issues/1950", false, "URL only"],
     [
+      "שלום (https://example.com/a/long/path) עולם",
+      true,
+      "Hebrew with a URL wrapped in parentheses",
+    ],
+    [
+      "שלום [support@example.com] עולם",
+      true,
+      "Hebrew with an email in brackets",
+    ],
+    [
       "Please open https://github.com/llm-d/llm-d-router/issues/1950 שלום",
       false,
       "English sentence with a URL stays LTR",
@@ -37,10 +47,14 @@ describe("isRtlText", () => {
   });
 });
 
-  test("stays fast on a long token with no whitespace", () => {
-    // Minified inline scripts arrive as a single 100 KB+ non-space run; a
-    // backtracking neutral-token regex made this quadratic (~10s at 100 KB).
-    const minified = "a".repeat(200_000);
+  test.each([
+    ["a".repeat(200_000), "a single 200 KB run of letters"],
+    ["a.b(c)=d;".repeat(30_000), "a 270 KB punctuation-heavy run"],
+  ])("stays fast on %#: %s", (minified) => {
+    // Minified inline scripts arrive as one 100 KB+ non-space run. Any regex
+    // that can start a token mid-run turns this quadratic: ~10s for the letter
+    // run when anchoring was missing, ~20s for the punctuation run when the
+    // anchor allowed any non-word character before the token.
     const start = performance.now();
     isRtlText(minified);
     expect(performance.now() - start).toBeLessThan(500);
