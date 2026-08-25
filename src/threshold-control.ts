@@ -8,9 +8,11 @@ export function setupThresholdControl(
 ): void {
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let saveQueue = Promise.resolve();
+  let hasPendingSave = false;
 
   const save = () => {
     const threshold = Number(input.value);
+    hasPendingSave = false;
     saveQueue = saveQueue
       .then(() => saveThreshold(threshold))
       .catch((error: unknown) => {
@@ -20,11 +22,18 @@ export function setupThresholdControl(
 
   input.addEventListener("input", () => {
     output.value = `${input.value}%`;
+    hasPendingSave = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, debounceMs);
   });
 
   input.addEventListener("change", () => {
+    clearTimeout(saveTimer);
+    save();
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (!hasPendingSave) return;
     clearTimeout(saveTimer);
     save();
   });

@@ -39,4 +39,20 @@ describe("setupThresholdControl", () => {
 
     expect(saved).toEqual([35]);
   });
+
+  test("flushes pending input when the popup closes", async () => {
+    const input = document.createElement("input");
+    const output = document.createElement("output");
+    input.value = "23";
+    const saved: number[] = [];
+
+    setupThresholdControl(input, output, async (threshold) => {
+      saved.push(threshold);
+    }, 1000);
+    input.dispatchEvent(new Event("input"));
+    window.dispatchEvent(new Event("pagehide"));
+    await Promise.resolve();
+
+    expect(saved).toEqual([23]);
+  });
 });
