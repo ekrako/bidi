@@ -17,8 +17,14 @@ function isLtrChar(c: number): boolean {
 // whole Hebrew sentence ("...רואים פתוח: https://github.com/llm-d/llm-d-router"
 // scored 39 LTR vs 39 RTL and rendered as LTR). They are direction-neutral
 // boilerplate for the reader, so drop them before counting.
+//
+// The `(?<=^|\s)` lookbehind pins both branches to a token start. Without it the
+// email branch (`\S+@…`) retries at every offset inside a long non-space run,
+// scanning to the end each time — quadratic, and enough to freeze a page that
+// carries a big minified inline script (a 270 KB one on amazon.fr blocked the
+// main thread for ~42s).
 const NEUTRAL_TOKEN_RE =
-  /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+/gi;
+  /(?<=^|\s)(?:(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+)/gi;
 
 /**
  * True when `text` reads right-to-left, by majority of directional letters.

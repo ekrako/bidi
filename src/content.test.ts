@@ -491,6 +491,32 @@ describe("applyRtlToElement — inline elements in RTL context", () => {
 // ---------- scanForRtl ----------
 
 describe("scanForRtl", () => {
+  test("skips script and style content", () => {
+    const script = document.createElement("script");
+    script.textContent = "var greeting = 'שלום עולם שלום עולם';";
+    const style = document.createElement("style");
+    style.textContent = "/* שלום עולם שלום עולם */ body { color: red; }";
+    const root = html("div", [script, style]);
+    document.body.appendChild(root);
+
+    scanForRtl(root);
+
+    expect(script.style.direction).toBe("");
+    expect(style.style.direction).toBe("");
+    expect(root.style.direction).toBe("");
+  });
+
+  test("script text inside a list item does not decide its direction", () => {
+    const script = document.createElement("script");
+    script.textContent = "var t = 'שלום עולם שלום עולם שלום עולם';";
+    const item = html("li", [html("p", ["Hello world"]), script]);
+    document.body.appendChild(html("ul", [item]));
+
+    scanForRtl(item);
+
+    expect(item.style.direction).toBe("");
+  });
+
   test("processes all elements in subtree", () => {
     const root = html("div", [
       html("div", [

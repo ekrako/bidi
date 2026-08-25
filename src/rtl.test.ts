@@ -37,6 +37,15 @@ describe("isRtlText", () => {
   });
 });
 
+  test("stays fast on a long token with no whitespace", () => {
+    // Minified inline scripts arrive as a single 100 KB+ non-space run; a
+    // backtracking neutral-token regex made this quadratic (~10s at 100 KB).
+    const minified = "a".repeat(200_000);
+    const start = performance.now();
+    isRtlText(minified);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+
 describe("containsRtl", () => {
   test.each([
     ["Hello world שלום", true, "mixed text with Hebrew"],
