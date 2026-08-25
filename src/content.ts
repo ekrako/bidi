@@ -58,6 +58,22 @@ const INLINE_TAGS = new Set([
 // from their full descendant text instead.
 const LIST_TAGS = new Set(["UL", "OL", "LI"]);
 
+// Tags whose text is never rendered as prose. Their content (minified JS/CSS,
+// JSON payloads) is pure cost for direction detection — and on script-heavy
+// sites it is hundreds of KB per element.
+const SKIP_TAGS = new Set([
+  "SCRIPT",
+  "STYLE",
+  "NOSCRIPT",
+  "TEMPLATE",
+  "IFRAME",
+  "OBJECT",
+  "EMBED",
+  "CANVAS",
+  "AUDIO",
+  "VIDEO",
+]);
+
 let currentMode: DirectionMode = "none";
 let observer: MutationObserver | null = null;
 
@@ -113,10 +129,11 @@ function unmarkElement(el: HTMLElement) {
   el.removeAttribute(MARKER);
 }
 
-/** Concatenated text of `el`, excluding any contenteditable subtrees at any
- * depth — editor-owned text must not influence direction detection. */
+/** Concatenated text of `el`, excluding contenteditable subtrees and non-prose
+ * elements (`SKIP_TAGS`) at any depth — neither editor-owned text nor script or
+ * style source must influence direction detection. */
 function textExcludingEditable(el: HTMLElement): string {
-  if (isEditableHost(el)) return "";
+  if (isEditableHost(el) || SKIP_TAGS.has(el.tagName)) return "";
   let text = "";
   for (const child of el.childNodes) {
     if (child.nodeType === Node.TEXT_NODE) text += child.textContent || "";
@@ -152,6 +169,7 @@ function clearMarkers(el: HTMLElement) {
 }
 
 export function applyRtlToElement(el: HTMLElement) {
+  if (SKIP_TAGS.has(el.tagName)) return;
   if (isInsideEditable(el)) {
     // The subtree may have been marked before it became editable; strip our
     // styles so stale RTL doesn't linger inside an editor we no longer touch.
@@ -224,6 +242,9 @@ export function scanForRtl(root: Node) {
   }
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
     acceptNode: (node) => {
+      if (node instanceof HTMLElement && SKIP_TAGS.has(node.tagName)) {
+        return NodeFilter.FILTER_REJECT;
+      }
       if (node instanceof HTMLElement && isEditableHost(node)) {
         // Strip markers a prior injection may have left inside this editor
         // before pruning the subtree.
