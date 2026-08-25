@@ -5,9 +5,9 @@ import {
   STORAGE_KEY,
   DEFAULT_KEY,
   BREAKER_KEY,
-  RTL_THRESHOLDS_KEY,
   DEFAULT_RTL_THRESHOLD,
   getSiteRtlThreshold,
+  rtlThresholdKey,
   type DirectionMode,
   type BreakerConfig,
 } from "./storage";
@@ -589,7 +589,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   // Only do the async work each key actually depends on: breaker config reloads
   // on the breaker key; mode re-evaluates on the site map or the default toggle.
   if (BREAKER_KEY in changes) setBreakerConfig(await getBreakerConfig());
-  if (RTL_THRESHOLDS_KEY in changes) {
+  if (rtlThresholdKey(location.hostname) in changes) {
     currentRtlThreshold = await getSiteRtlThreshold(location.hostname);
     if (currentMode === "auto" && document.body) scanForRtl(document.body);
   }

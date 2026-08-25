@@ -32,7 +32,8 @@ const NEUTRAL_TOKEN_RE =
   /(?<=^|\s)[\p{P}\p{S}]*(?:(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+)/giu;
 
 /**
- * True when `text` reads right-to-left, by majority of directional letters.
+ * True when the percentage of RTL directional letters in `text` meets or
+ * exceeds `threshold`, which defaults to 50.
  *
  * URL and email tokens are stripped before counting, so the returned direction
  * reflects the prose only — offsets in `text` do not map to what was counted.

@@ -141,16 +141,28 @@ test("stores RTL thresholds independently per site", async () => {
   await setSiteRtlThreshold("claude.ai", 35);
   await setSiteRtlThreshold("chatgpt.com", 60);
 
+  expect(store).toMatchObject({
+    "rtlThreshold:claude.ai": 35,
+    "rtlThreshold:chatgpt.com": 60,
+  });
+  expect(await getSiteRtlThreshold("claude.ai")).toBe(35);
+  expect(await getSiteRtlThreshold("chatgpt.com")).toBe(60);
+});
+
+test("does not lose concurrent threshold updates for different sites", async () => {
+  await Promise.all([
+    setSiteRtlThreshold("claude.ai", 35),
+    setSiteRtlThreshold("chatgpt.com", 60),
+  ]);
+
   expect(await getSiteRtlThreshold("claude.ai")).toBe(35);
   expect(await getSiteRtlThreshold("chatgpt.com")).toBe(60);
 });
 
 test("falls back when a stored RTL threshold is invalid", async () => {
-  store.rtlThresholds = {
-    "too-low.example": 0,
-    "too-high.example": 101,
-    "not-a-number.example": "50",
-  };
+  store["rtlThreshold:too-low.example"] = 0;
+  store["rtlThreshold:too-high.example"] = 101;
+  store["rtlThreshold:not-a-number.example"] = "50";
 
   expect(await getSiteRtlThreshold("too-low.example")).toBe(DEFAULT_RTL_THRESHOLD);
   expect(await getSiteRtlThreshold("too-high.example")).toBe(DEFAULT_RTL_THRESHOLD);
