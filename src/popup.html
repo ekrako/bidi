@@ -2,112 +2,32 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <style>
-      body {
-        width: 220px;
-        padding: 12px;
-        font-family: system-ui, sans-serif;
-        font-size: 13px;
-        margin: 0;
-      }
-      .site {
-        margin-bottom: 10px;
-        color: #555;
-        word-break: break-all;
-      }
-      .site span {
-        font-weight: 600;
-        color: #111;
-      }
-      #buttons {
-        display: flex;
-        gap: 6px;
-      }
-      button {
-        flex: 1;
-        padding: 6px 0;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
-      }
-      button:hover {
-        background: #f0f0f0;
-      }
-      button.active {
-        background: #4a90d9;
-        color: #fff;
-        border-color: #4a90d9;
-      }
-      .default-toggle {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 10px;
-        padding-top: 8px;
-        border-top: 1px solid #eee;
-        color: #555;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .default-toggle input {
-        margin: 0;
-      }
-      .footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 10px;
-        padding-top: 8px;
-        border-top: 1px solid #eee;
-        font-size: 11px;
-        color: #888;
-      }
-      .footer button {
-        flex: none;
-        padding: 3px 8px;
-        font-size: 11px;
-        color: #4a90d9;
-        border-color: #cfe0f2;
-      }
-      .footer button:disabled {
-        opacity: 0.6;
-        cursor: default;
-      }
-      #reportDesc {
-        display: none;
-        width: 100%;
-        box-sizing: border-box;
-        margin-top: 8px;
-        padding: 6px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 12px;
-        resize: vertical;
-      }
-      #reportDesc.open {
-        display: block;
-      }
-      #reportStatus {
-        margin-top: 6px;
-        font-size: 11px;
-        min-height: 14px;
-        word-break: break-word;
-      }
-      #reportStatus.error {
-        color: #b00020;
-      }
-      #reportStatus.ok {
-        color: #1a7f37;
-      }
-    </style>
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <div class="site"><span id="hostname"></span></div>
     <div id="buttons"></div>
+    <label class="threshold" for="rtlThreshold">
+      <span class="threshold-label">
+        RTL character threshold
+        <span
+          class="threshold-help"
+          tabindex="0"
+          role="img"
+          aria-label="Minimum percentage of directional letters that must be Hebrew, Arabic, or Persian for Auto mode to make the text RTL. Lower values allow more Latin text. This setting is saved separately for each site."
+          data-tooltip="The minimum share of Hebrew, Arabic, or Persian letters needed to make text RTL. Lower values allow more Latin text. Saved separately for each site."
+        >?</span>
+      </span>
+      <output id="rtlThresholdValue" for="rtlThreshold">50%</output>
+      <input
+        id="rtlThreshold"
+        type="range"
+        min="1"
+        max="100"
+        step="1"
+        value="50"
+      />
+    </label>
     <label class="default-toggle">
       <input type="checkbox" id="autoDefault" />
       Auto by default

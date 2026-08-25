@@ -32,12 +32,13 @@ const NEUTRAL_TOKEN_RE =
   /(?<=^|\s)[\p{P}\p{S}]*(?:(?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)\S+|\S+@[\w-]+(?:\.[\w-]+)+)/giu;
 
 /**
- * True when `text` reads right-to-left, by majority of directional letters.
+ * True when the percentage of RTL directional letters in `text` meets or
+ * exceeds `threshold`, which defaults to 50.
  *
  * URL and email tokens are stripped before counting, so the returned direction
  * reflects the prose only — offsets in `text` do not map to what was counted.
  */
-export function isRtlText(text: string): boolean {
+export function isRtlText(text: string, threshold = 50): boolean {
   const prose = text.replace(NEUTRAL_TOKEN_RE, " ");
   let rtl = 0;
   let ltr = 0;
@@ -49,7 +50,7 @@ export function isRtlText(text: string): boolean {
   }
 
   if (rtl === 0 && ltr === 0) return false;
-  return rtl > ltr;
+  return (rtl / (rtl + ltr)) * 100 >= threshold;
 }
 
 export function containsRtl(text: string): boolean {

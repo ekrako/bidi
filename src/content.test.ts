@@ -162,6 +162,18 @@ describe("applyRtlToElement — block elements", () => {
     expect(div.hasAttribute(MARKER)).toBe(true);
   });
 
+  test("uses the configured RTL threshold for mixed technical prose", () => {
+    const div = html("div", [
+      "בדקתי את Claude Haiku anthropic-vertex-claude-haiku",
+    ]);
+    document.body.appendChild(div);
+
+    applyRtlToElement(div, 15);
+
+    expect(div.style.direction).toBe("rtl");
+    expect(div.style.textAlign).toBe("right");
+  });
+
   test("does not set direction on block with predominantly LTR text", () => {
     const div = html("div", ["Hello world, this is English"]);
     document.body.appendChild(div);

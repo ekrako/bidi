@@ -23,6 +23,7 @@ await Bun.build({
 });
 
 await cp("src/popup.html", "dist/popup.html");
+await cp("src/popup.css", "dist/popup.css");
 await cp("manifest.json", "dist/manifest.json");
 await cp("icons", "dist/icons", { recursive: true });
 

@@ -3,6 +3,8 @@ export type DirectionMode = "none" | "rtl" | "auto";
 export const STORAGE_KEY = "sites";
 export const DEFAULT_KEY = "autoByDefault";
 export const BREAKER_KEY = "breaker";
+export const DEFAULT_RTL_THRESHOLD = 50;
+const RTL_THRESHOLD_PREFIX = "rtlThreshold:";
 
 /** Circuit-breaker thresholds for the Auto-mode MutationObserver. */
 export interface BreakerConfig {
@@ -78,4 +80,32 @@ export async function setSiteMode(
   }
 
   await chrome.storage.sync.set({ [STORAGE_KEY]: sites });
+}
+
+function isValidRtlThreshold(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 100;
+}
+
+export async function getSiteRtlThreshold(hostname: string): Promise<number> {
+  const key = rtlThresholdKey(hostname);
+  const result = await chrome.storage.sync.get(key);
+  const threshold = result[key];
+  return isValidRtlThreshold(threshold)
+    ? threshold
+    : DEFAULT_RTL_THRESHOLD;
+}
+
+export function rtlThresholdKey(hostname: string): string {
+  return `${RTL_THRESHOLD_PREFIX}${hostname}`;
+}
+
+export async function setSiteRtlThreshold(
+  hostname: string,
+  threshold: number,
+): Promise<void> {
+  if (!isValidRtlThreshold(threshold)) {
+    throw new RangeError("RTL threshold must be between 1 and 100");
+  }
+
+  await chrome.storage.sync.set({ [rtlThresholdKey(hostname)]: threshold });
 }

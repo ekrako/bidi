@@ -5,6 +5,9 @@ import {
   STORAGE_KEY,
   DEFAULT_KEY,
   BREAKER_KEY,
+  DEFAULT_RTL_THRESHOLD,
+  getSiteRtlThreshold,
+  rtlThresholdKey,
   type DirectionMode,
   type BreakerConfig,
 } from "./storage";
@@ -75,6 +78,7 @@ const SKIP_TAGS = new Set([
 ]);
 
 let currentMode: DirectionMode = "none";
+let currentRtlThreshold = DEFAULT_RTL_THRESHOLD;
 let observer: MutationObserver | null = null;
 
 /** True when `el` is a contenteditable host. Only the values the HTML spec
@@ -168,7 +172,10 @@ function clearMarkers(el: HTMLElement) {
   el.querySelectorAll<HTMLElement>(MARKER_SELECTOR).forEach(unmarkElement);
 }
 
-export function applyRtlToElement(el: HTMLElement) {
+export function applyRtlToElement(
+  el: HTMLElement,
+  rtlThreshold = currentRtlThreshold,
+) {
   if (SKIP_TAGS.has(el.tagName)) return;
   if (isInsideEditable(el)) {
     // The subtree may have been marked before it became editable; strip our
@@ -199,7 +206,7 @@ export function applyRtlToElement(el: HTMLElement) {
 
   const marked = el.hasAttribute(MARKER);
 
-  if (isRtlText(text)) {
+  if (isRtlText(text, rtlThreshold)) {
     markElement(el, "direction", "rtl");
     // `direction:rtl` alone does not override a site's explicit
     // `text-align:left` (e.g. MUI/markdown CSS): runs reorder but the block
@@ -569,7 +576,11 @@ function applyMode(mode: DirectionMode) {
 
 async function init() {
   setBreakerConfig(await getBreakerConfig());
-  const mode = await getSiteMode(location.hostname);
+  const [mode, rtlThreshold] = await Promise.all([
+    getSiteMode(location.hostname),
+    getSiteRtlThreshold(location.hostname),
+  ]);
+  currentRtlThreshold = rtlThreshold;
   applyMode(mode);
 }
 
@@ -578,6 +589,10 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   // Only do the async work each key actually depends on: breaker config reloads
   // on the breaker key; mode re-evaluates on the site map or the default toggle.
   if (BREAKER_KEY in changes) setBreakerConfig(await getBreakerConfig());
+  if (rtlThresholdKey(location.hostname) in changes) {
+    currentRtlThreshold = await getSiteRtlThreshold(location.hostname);
+    if (currentMode === "auto" && document.body) scanForRtl(document.body);
+  }
   if (STORAGE_KEY in changes || DEFAULT_KEY in changes) {
     applyMode(await getSiteMode(location.hostname));
   }
