@@ -37,7 +37,7 @@ const NEUTRAL_TOKEN_RE =
  * URL and email tokens are stripped before counting, so the returned direction
  * reflects the prose only — offsets in `text` do not map to what was counted.
  */
-export function isRtlText(text: string): boolean {
+export function isRtlText(text: string, threshold = 50): boolean {
   const prose = text.replace(NEUTRAL_TOKEN_RE, " ");
   let rtl = 0;
   let ltr = 0;
@@ -49,7 +49,7 @@ export function isRtlText(text: string): boolean {
   }
 
   if (rtl === 0 && ltr === 0) return false;
-  return rtl > ltr;
+  return (rtl / (rtl + ltr)) * 100 >= threshold;
 }
 
 export function containsRtl(text: string): boolean {

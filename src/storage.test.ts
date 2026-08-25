@@ -6,6 +6,9 @@ import {
   setAutoByDefault,
   getBreakerConfig,
   DEFAULT_BREAKER_CONFIG,
+  DEFAULT_RTL_THRESHOLD,
+  getSiteRtlThreshold,
+  setSiteRtlThreshold,
   type DirectionMode,
 } from "./storage";
 
@@ -128,4 +131,34 @@ test("getBreakerConfig defaults fields that are absent from a partial override",
     cooldownMs: DEFAULT_BREAKER_CONFIG.cooldownMs,
     maxTrips: DEFAULT_BREAKER_CONFIG.maxTrips,
   });
+});
+
+test("returns the default RTL threshold for an unknown site", async () => {
+  expect(await getSiteRtlThreshold("example.com")).toBe(DEFAULT_RTL_THRESHOLD);
+});
+
+test("stores RTL thresholds independently per site", async () => {
+  await setSiteRtlThreshold("claude.ai", 35);
+  await setSiteRtlThreshold("chatgpt.com", 60);
+
+  expect(await getSiteRtlThreshold("claude.ai")).toBe(35);
+  expect(await getSiteRtlThreshold("chatgpt.com")).toBe(60);
+});
+
+test("falls back when a stored RTL threshold is invalid", async () => {
+  store.rtlThresholds = {
+    "too-low.example": 0,
+    "too-high.example": 101,
+    "not-a-number.example": "50",
+  };
+
+  expect(await getSiteRtlThreshold("too-low.example")).toBe(DEFAULT_RTL_THRESHOLD);
+  expect(await getSiteRtlThreshold("too-high.example")).toBe(DEFAULT_RTL_THRESHOLD);
+  expect(await getSiteRtlThreshold("not-a-number.example")).toBe(DEFAULT_RTL_THRESHOLD);
+});
+
+test("rejects an out-of-range RTL threshold", async () => {
+  expect(setSiteRtlThreshold("example.com", 0)).rejects.toThrow(
+    "RTL threshold must be between 1 and 100",
+  );
 });

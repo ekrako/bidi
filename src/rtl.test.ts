@@ -47,6 +47,19 @@ describe("isRtlText", () => {
   });
 });
 
+describe("isRtlText threshold", () => {
+  test("uses the configured RTL percentage", () => {
+    const text = "שלום hello world";
+
+    expect(isRtlText(text, 20)).toBe(true);
+    expect(isRtlText(text, 80)).toBe(false);
+  });
+
+  test("treats the threshold as inclusive", () => {
+    expect(isRtlText("אבab", 50)).toBe(true);
+  });
+});
+
   test.each([
     ["a".repeat(200_000), "a single 200 KB run of letters"],
     ["a.b(c)=d;".repeat(30_000), "a 270 KB punctuation-heavy run"],

@@ -3,6 +3,8 @@ import {
   setSiteMode,
   getAutoByDefault,
   setAutoByDefault,
+  getSiteRtlThreshold,
+  setSiteRtlThreshold,
   type DirectionMode,
 } from "./storage";
 import { collectDom, submitReport } from "./report";
@@ -86,6 +88,22 @@ async function init() {
 
   hostnameEl.textContent = hostname;
   const currentMode = await getSiteMode(hostname);
+
+  const thresholdEl = document.getElementById(
+    "rtlThreshold",
+  ) as HTMLInputElement;
+  const thresholdValueEl = document.getElementById(
+    "rtlThresholdValue",
+  ) as HTMLOutputElement;
+  const threshold = await getSiteRtlThreshold(hostname);
+  thresholdEl.value = String(threshold);
+  thresholdValueEl.value = `${threshold}%`;
+  thresholdEl.addEventListener("input", () => {
+    thresholdValueEl.value = `${thresholdEl.value}%`;
+  });
+  thresholdEl.addEventListener("change", async () => {
+    await setSiteRtlThreshold(hostname, Number(thresholdEl.value));
+  });
 
   const autoDefaultEl = document.getElementById("autoDefault") as HTMLInputElement;
   autoDefaultEl.checked = await getAutoByDefault();
