@@ -1,4 +1,8 @@
-import { getSiteMode } from "./storage";
+import { getSiteMode, setSiteRtlThreshold } from "./storage";
+import {
+  isSetSiteRtlThresholdMessage,
+  type SetSiteRtlThresholdResponse,
+} from "./threshold-message";
 
 const BADGE_BG = "#8B0000";
 const BADGE_FG = "#FFFFFF";
@@ -104,4 +108,14 @@ chrome.storage.onChanged.addListener(async () => {
   if (tab?.id && tab.url) {
     updateIcon(tab.id, tab.url);
   }
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!isSetSiteRtlThresholdMessage(message)) return;
+
+  setSiteRtlThreshold(message.hostname, message.threshold).then(
+    () => sendResponse({ ok: true } satisfies SetSiteRtlThresholdResponse),
+    () => sendResponse({ ok: false } satisfies SetSiteRtlThresholdResponse),
+  );
+  return true;
 });

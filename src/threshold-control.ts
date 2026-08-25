@@ -7,17 +7,14 @@ export function setupThresholdControl(
   debounceMs = 150,
 ): void {
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
-  let saveQueue = Promise.resolve();
   let hasPendingSave = false;
 
   const save = () => {
     const threshold = Number(input.value);
     hasPendingSave = false;
-    saveQueue = saveQueue
-      .then(() => saveThreshold(threshold))
-      .catch((error: unknown) => {
-        console.error("Failed to save RTL threshold", error);
-      });
+    saveThreshold(threshold).catch((error: unknown) => {
+      console.error("Failed to save RTL threshold", error);
+    });
   };
 
   input.addEventListener("input", () => {
