@@ -77,4 +77,29 @@ describe("setupThresholdControl", () => {
 
     expect(saved).toEqual([20, 23]);
   });
+
+  test("retries a failed save when the popup closes", async () => {
+    const input = document.createElement("input");
+    const output = document.createElement("output");
+    const saved: number[] = [];
+    const originalConsoleError = console.error;
+    console.error = () => {};
+
+    try {
+      setupThresholdControl(input, output, async (threshold) => {
+        saved.push(threshold);
+        if (saved.length === 1) throw new Error("storage unavailable");
+      }, 0);
+
+      input.value = "23";
+      input.dispatchEvent(new Event("input"));
+      await Bun.sleep(5);
+      window.dispatchEvent(new Event("pagehide"));
+      await Promise.resolve();
+
+      expect(saved).toEqual([23, 23]);
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
 });

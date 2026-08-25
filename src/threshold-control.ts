@@ -8,17 +8,25 @@ export function setupThresholdControl(
 ): void {
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let hasPendingSave = false;
+  let stateVersion = 0;
 
   const save = () => {
     const threshold = Number(input.value);
-    hasPendingSave = false;
-    saveThreshold(threshold).catch((error: unknown) => {
-      console.error("Failed to save RTL threshold", error);
-    });
+    const saveVersion = ++stateVersion;
+    hasPendingSave = true;
+    saveThreshold(threshold).then(
+      () => {
+        if (stateVersion === saveVersion) hasPendingSave = false;
+      },
+      (error: unknown) => {
+        console.error("Failed to save RTL threshold", error);
+      },
+    );
   };
 
   input.addEventListener("input", () => {
     output.value = `${input.value}%`;
+    stateVersion += 1;
     hasPendingSave = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, debounceMs);
