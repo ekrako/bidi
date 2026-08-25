@@ -8,6 +8,7 @@ import {
   type DirectionMode,
 } from "./storage";
 import { collectDom, submitReport } from "./report";
+import { setupThresholdControl } from "./threshold-control";
 
 const MODES: DirectionMode[] = ["none", "auto", "rtl"];
 
@@ -98,12 +99,9 @@ async function init() {
   const threshold = await getSiteRtlThreshold(hostname);
   thresholdEl.value = String(threshold);
   thresholdValueEl.value = `${threshold}%`;
-  thresholdEl.addEventListener("input", () => {
-    thresholdValueEl.value = `${thresholdEl.value}%`;
-  });
-  thresholdEl.addEventListener("change", async () => {
-    await setSiteRtlThreshold(hostname, Number(thresholdEl.value));
-  });
+  setupThresholdControl(thresholdEl, thresholdValueEl, (value) =>
+    setSiteRtlThreshold(hostname, value),
+  );
 
   const autoDefaultEl = document.getElementById("autoDefault") as HTMLInputElement;
   autoDefaultEl.checked = await getAutoByDefault();
