@@ -1,9 +1,15 @@
-import { getSiteMode } from "./storage";
+import { getSiteMode, setSiteRtlThreshold } from "./storage";
+import {
+  isSetSiteRtlThresholdMessage,
+  type SetSiteRtlThresholdResponse,
+} from "./threshold-message";
+import { createThresholdSaveQueue } from "./threshold-save-queue";
 
 const BADGE_BG = "#8B0000";
 const BADGE_FG = "#FFFFFF";
 
 const iconCache: Record<number, ImageBitmap> = {};
+const enqueueThresholdSave = createThresholdSaveQueue(setSiteRtlThreshold);
 
 async function getIcon(size: number): Promise<ImageBitmap> {
   if (!iconCache[size]) {
@@ -104,4 +110,14 @@ chrome.storage.onChanged.addListener(async () => {
   if (tab?.id && tab.url) {
     updateIcon(tab.id, tab.url);
   }
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!isSetSiteRtlThresholdMessage(message)) return;
+
+  enqueueThresholdSave(message.hostname, message.threshold).then(
+    () => sendResponse({ ok: true } satisfies SetSiteRtlThresholdResponse),
+    () => sendResponse({ ok: false } satisfies SetSiteRtlThresholdResponse),
+  );
+  return true;
 });

@@ -39,7 +39,17 @@ declare const chrome: {
   runtime: {
     getURL(path: string): string;
     getManifest(): { version: string; name: string };
+    sendMessage(message: unknown): Promise<unknown>;
     onInstalled: { addListener(cb: () => void): void };
+    onMessage: {
+      addListener(
+        callback: (
+          message: unknown,
+          sender: unknown,
+          sendResponse: (response: unknown) => void,
+        ) => true | void,
+      ): void;
+    };
   };
   scripting: {
     executeScript<T>(injection: {

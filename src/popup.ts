@@ -4,10 +4,14 @@ import {
   getAutoByDefault,
   setAutoByDefault,
   getSiteRtlThreshold,
-  setSiteRtlThreshold,
   type DirectionMode,
 } from "./storage";
 import { collectDom, submitReport } from "./report";
+import { setupThresholdControl } from "./threshold-control";
+import {
+  SET_SITE_RTL_THRESHOLD,
+  type SetSiteRtlThresholdResponse,
+} from "./threshold-message";
 
 const MODES: DirectionMode[] = ["none", "auto", "rtl"];
 
@@ -98,11 +102,15 @@ async function init() {
   const threshold = await getSiteRtlThreshold(hostname);
   thresholdEl.value = String(threshold);
   thresholdValueEl.value = `${threshold}%`;
-  thresholdEl.addEventListener("input", () => {
-    thresholdValueEl.value = `${thresholdEl.value}%`;
-  });
-  thresholdEl.addEventListener("change", async () => {
-    await setSiteRtlThreshold(hostname, Number(thresholdEl.value));
+  setupThresholdControl(thresholdEl, thresholdValueEl, async (threshold) => {
+    const response = (await chrome.runtime.sendMessage({
+      type: SET_SITE_RTL_THRESHOLD,
+      hostname,
+      threshold,
+    })) as SetSiteRtlThresholdResponse | undefined;
+    if (response?.ok !== true) {
+      throw new Error("Background threshold save failed");
+    }
   });
 
   const autoDefaultEl = document.getElementById("autoDefault") as HTMLInputElement;
