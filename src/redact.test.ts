@@ -71,6 +71,11 @@ test("redacts a truncated PEM block followed by a complete one", () => {
   );
 });
 
+test("redacts a PEM block far longer than any real key", () => {
+  const pem = `${pemMarker("BEGIN")}\n${"Q".repeat(40_000)}\n${pemMarker("END")}`;
+  expect(redactSecrets(`<a>${pem}</a>`)).toBe(`<a>${REDACTED}</a>`);
+});
+
 test("stays fast on input full of stray BEGIN markers", () => {
   const input = `${pemMarker("BEGIN")} `.repeat(20_000);
   const started = performance.now();

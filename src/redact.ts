@@ -10,7 +10,12 @@
 
 export const REDACTED = "[REDACTED]";
 
-const SECRET_PATTERNS: readonly RegExp[] = [
+/**
+ * Token shapes redacted by {@link redactSecrets}. Exported so the DOM
+ * sanitizer, which runs inside the page and cannot import this module, can be
+ * handed the same patterns via `executeScript` args.
+ */
+export const SECRET_PATTERNS: readonly RegExp[] = [
   /AIza[0-9A-Za-z_-]{35}/g, // Google API key
   /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g, // GitHub token
   /\bgithub_pat_[A-Za-z0-9_]{22,}\b/g, // GitHub fine-grained PAT
@@ -22,42 +27,35 @@ const SECRET_PATTERNS: readonly RegExp[] = [
 ];
 
 const PEM_BEGIN = /-----BEGIN [A-Z ]*PRIVATE KEY-----/g;
-const PEM_END = /-----END [A-Z ]*PRIVATE KEY-----/;
-// Where a truncated block's key material ends: the next PEM marker, or the
-// markup that follows the truncated node/attribute. PEM bodies never contain
-// these characters.
-const PEM_TRUNCATED_STOP = /-----(?:BEGIN|END) [A-Z ]*PRIVATE KEY-----|[<>"']/;
-// Real key blocks are a few KB; bounding the END search keeps a page full of
-// stray BEGIN markers from turning redaction quadratic.
-const MAX_PEM_CHARS = 16_384;
+// Where a block's key material ends: its own END marker (group 1), or, for a
+// block the DOM sanitizer truncated, the next PEM marker or the markup that
+// follows the node. PEM bodies, including encrypted-key headers, never
+// contain these.
+const PEM_STOP = /(-----END [A-Z ]*PRIVATE KEY-----)|-----BEGIN [A-Z ]*PRIVATE KEY-----|[<>"']/g;
 
 /**
  * Redacts PEM private key blocks in a single forward pass.
  *
- * A full BEGIN…END block is consumed whole, so encrypted keys with
- * `Proc-Type:` / `DEK-Info:` headers are covered. When the END marker is
- * missing, typically because the DOM sanitizer truncated the node, the header
- * and whatever key material follows it are consumed instead.
+ * Each BEGIN marker is consumed together with everything up to its END
+ * marker, so encrypted keys with `Proc-Type:` / `DEK-Info:` headers are
+ * covered. A block missing its END marker, typically because the DOM
+ * sanitizer truncated the node, is consumed up to the next PEM marker or
+ * markup. Every character is scanned once, so the pass is linear.
  */
 function redactPemBlocks(text: string): string {
   let out = "";
   let cursor = 0;
   for (const begin of text.matchAll(PEM_BEGIN)) {
-    const start = begin.index;
-    if (start < cursor) continue;
-    const bodyStart = start + begin[0].length;
-    const window = text.slice(bodyStart, bodyStart + MAX_PEM_CHARS);
-    const end = PEM_END.exec(window);
-    const nextBegin = window.search(PEM_BEGIN);
-    const endsThisBlock = end && (nextBegin === -1 || end.index < nextBegin);
-    const stop = window.search(PEM_TRUNCATED_STOP);
-    const bodyLength = endsThisBlock
-      ? end.index + end[0].length
-      : stop === -1
-        ? window.length
-        : stop;
-    out += text.slice(cursor, start) + REDACTED;
-    cursor = bodyStart + bodyLength;
+    if (begin.index < cursor) continue;
+    PEM_STOP.lastIndex = begin.index + begin[0].length;
+    const stop = PEM_STOP.exec(text);
+    const blockEnd = !stop
+      ? text.length
+      : stop[1]
+        ? stop.index + stop[0].length
+        : stop.index;
+    out += text.slice(cursor, begin.index) + REDACTED;
+    cursor = blockEnd;
   }
   return out + text.slice(cursor);
 }

@@ -6,6 +6,7 @@ import {
   submitReport,
   type ReportPayload,
 } from "./report";
+import { SECRET_PATTERNS } from "./redact";
 
 GlobalRegistrator.register({ url: "https://test.example.com" });
 
@@ -58,10 +59,26 @@ test("collectDom redacts credential-shaped tokens from the captured DOM", async 
   expect(await collectDom(1)).toBe('<div data-api="[REDACTED]"></div>');
 });
 
+test("collectDom hands the secret patterns to the injected sanitizer", async () => {
+  await collectDom(1);
+  const injection = executeScriptCalls[0] as { args: string[][] };
+  expect(injection.args).toEqual([SECRET_PATTERNS.map((p) => p.source)]);
+});
+
+test("grabSanitizedHtml redacts a token that would otherwise be cut by the length cap", () => {
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  document.body.innerHTML = `<div data-x="${"p".repeat(180)}${key}${"q".repeat(50)}">${"t".repeat(190)}${key}</div>`;
+  const sources = SECRET_PATTERNS.map((p) => p.source);
+  const html = grabSanitizedHtml(sources);
+  expect(html).not.toMatch(/AIzaSy/);
+  expect(html).toContain(`data-x="${"p".repeat(180)}[REDACTED]`);
+  expect(html).toContain(`${"t".repeat(190)}[REDACTED]`);
+});
+
 test("grabSanitizedHtml drops script, style and media content", () => {
   document.documentElement.innerHTML = `<head><style>.a{color:red}</style></head><body><script>var payload = "secret"</script><audio src="a.mp3"><source src="a.ogg"></audio><video src="v.mp4"></video><p dir="rtl">שלום</p></body>`;
 
-  const html = grabSanitizedHtml();
+  const html = grabSanitizedHtml([]);
   expect(html).not.toContain("secret");
   expect(html).not.toContain("color:red");
   expect(html).not.toContain("<audio");
@@ -74,7 +91,7 @@ test("grabSanitizedHtml drops script, style and media content", () => {
 test("grabSanitizedHtml keeps direction-relevant attributes in full", () => {
   document.documentElement.innerHTML = `<body><div dir="ltr" style="direction: ltr; text-align: left;" data-bidi="" class="${"c".repeat(300)}">x</div></body>`;
 
-  const html = grabSanitizedHtml();
+  const html = grabSanitizedHtml([]);
   expect(html).toContain('dir="ltr"');
   expect(html).toContain("direction: ltr; text-align: left;");
   expect(html).toContain('data-bidi=""');
@@ -84,7 +101,7 @@ test("grabSanitizedHtml keeps direction-relevant attributes in full", () => {
 test("grabSanitizedHtml caps other attributes and long text", () => {
   document.documentElement.innerHTML = `<body><div jsdata="${"j".repeat(500)}">${"t".repeat(500)}</div></body>`;
 
-  const html = grabSanitizedHtml();
+  const html = grabSanitizedHtml([]);
   expect(html).toContain(`${"j".repeat(200)}…`);
   expect(html).not.toContain("j".repeat(201));
   expect(html).toContain(`${"t".repeat(200)}…`);
@@ -94,7 +111,7 @@ test("grabSanitizedHtml caps other attributes and long text", () => {
 test("grabSanitizedHtml leaves the live document untouched", () => {
   document.documentElement.innerHTML = `<body><script>var keep = 1</script><p>${"t".repeat(400)}</p></body>`;
 
-  grabSanitizedHtml();
+  grabSanitizedHtml([]);
   expect(document.querySelector("script")).not.toBeNull();
   expect(document.querySelector("p")!.textContent).toHaveLength(400);
 });

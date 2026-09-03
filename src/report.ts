@@ -8,7 +8,7 @@
  */
 
 // Configured after deploying worker/ — see worker/README.md.
-import { redactSecrets } from "./redact";
+import { SECRET_PATTERNS, redactSecrets } from "./redact";
 
 export const REPORT_ENDPOINT = "https://bidi-report.ekrako.workers.dev/report";
 
@@ -34,10 +34,16 @@ export interface ReportResult {
  * This keeps what BiDi is debugged from — structure, `dir`/`style`/`class`,
  * our own markers, a sample of the text — and drops the rest.
  *
+ * Credential-shaped tokens are redacted before values are length-capped, since
+ * a token cut by the cap no longer matches its pattern downstream.
+ *
  * Self-contained by necessity: it is serialized and injected into the page,
- * so it cannot reference anything in module scope.
+ * so it cannot reference anything in module scope. The redaction patterns are
+ * therefore passed in as regex sources.
+ *
+ * @param secretPatternSources `RegExp.source` of each token shape to redact.
  */
-export function grabSanitizedHtml(): string {
+export function grabSanitizedHtml(secretPatternSources: string[]): string {
   const DROPPED_TAGS = new Set([
     "SCRIPT",
     "STYLE",
@@ -67,6 +73,10 @@ export function grabSanitizedHtml(): string {
   ]);
   const MAX_ATTR_CHARS = 200;
   const MAX_TEXT_CHARS = 200;
+  const REDACTED = "[REDACTED]";
+  const secretPatterns = secretPatternSources.map((source) => new RegExp(source, "g"));
+  const redact = (value: string): string =>
+    secretPatterns.reduce((acc, pattern) => acc.replace(pattern, REDACTED), value);
 
   const clone = document.documentElement.cloneNode(true) as Element;
 
@@ -80,18 +90,18 @@ export function grabSanitizedHtml(): string {
     }
 
     for (const attr of Array.from(el.attributes)) {
-      const name = attr.name.toLowerCase();
-      if (KEPT_ATTRS.has(name)) continue;
-      if (attr.value.length > MAX_ATTR_CHARS) {
-        el.setAttribute(attr.name, `${attr.value.slice(0, MAX_ATTR_CHARS)}…`);
-      }
+      const value = redact(attr.value);
+      const capped =
+        KEPT_ATTRS.has(attr.name.toLowerCase()) || value.length <= MAX_ATTR_CHARS
+          ? value
+          : `${value.slice(0, MAX_ATTR_CHARS)}…`;
+      if (capped !== attr.value) el.setAttribute(attr.name, capped);
     }
 
     for (const node of Array.from(el.childNodes)) {
-      const text = node.nodeType === 3 ? (node.nodeValue ?? "") : "";
-      if (text.length > MAX_TEXT_CHARS) {
-        node.nodeValue = `${text.slice(0, MAX_TEXT_CHARS)}…`;
-      }
+      if (node.nodeType !== 3) continue;
+      const text = redact(node.nodeValue ?? "");
+      node.nodeValue = text.length > MAX_TEXT_CHARS ? `${text.slice(0, MAX_TEXT_CHARS)}…` : text;
     }
   };
 
@@ -103,6 +113,7 @@ export async function collectDom(tabId: number): Promise<string> {
   const [injection] = await chrome.scripting.executeScript({
     target: { tabId },
     func: grabSanitizedHtml,
+    args: [SECRET_PATTERNS.map((pattern) => pattern.source)],
   });
   return redactSecrets(injection?.result ?? "");
 }
