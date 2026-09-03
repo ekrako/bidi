@@ -106,13 +106,15 @@ function buildIssueBody(p: ReportPayload): string {
 async function createIssue(env: Env, p: ReportPayload): Promise<string> {
   const owner = env.GITHUB_OWNER || "ekrako";
   const repo = env.GITHUB_REPO || "bidi";
-  const hostname = (() => {
-    try {
-      return new URL(p.url).hostname;
-    } catch {
-      return redactSecrets(p.url);
-    }
-  })();
+  const hostname = redactSecrets(
+    (() => {
+      try {
+        return new URL(p.url).hostname;
+      } catch {
+        return p.url;
+      }
+    })(),
+  );
 
   const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
     method: "POST",

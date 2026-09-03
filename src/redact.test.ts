@@ -5,6 +5,8 @@ import { REDACTED, redactSecrets } from "./redact";
 const GOOGLE_KEY = ["AIza", "Sy", "A".repeat(33)].join("");
 const GITHUB_TOKEN = ["ghp", "_", "B".repeat(36)].join("");
 const JWT = ["eyJ" + "a".repeat(20), "eyJ" + "b".repeat(20), "c".repeat(20)].join(".");
+const pemMarker = (kind: "BEGIN" | "END", label = "PRIVATE KEY") =>
+  ["-----", kind, " ", label, "-----"].join("");
 
 test("redacts a Google API key embedded in an attribute", () => {
   const html = `<div data-api="${GOOGLE_KEY}" id="tray"></div>`;
@@ -34,14 +36,26 @@ test("redacts Stripe live and test keys", () => {
 });
 
 test("redacts JWTs and PEM private key blocks", () => {
-  const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEow\nIBAAKC\n-----END RSA PRIVATE KEY-----";
+  const pem = `${pemMarker("BEGIN", "RSA PRIVATE KEY")}\nMIIEow\nIBAAKC\n${pemMarker("END", "RSA PRIVATE KEY")}`;
   const out = redactSecrets(`${JWT}\n${pem}`);
   expect(out).toBe(`${REDACTED}\n${REDACTED}`);
 });
 
 test("redacts a PEM block whose end marker was truncated away", () => {
-  const html = `<pre>-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\nBKcwggSjAgEAAoIBAQ…</pre>`;
+  const html = `<pre>${pemMarker("BEGIN")}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\nBKcwggSjAgEAAoIBAQ…</pre>`;
   expect(redactSecrets(html)).toBe(`<pre>${REDACTED}</pre>`);
+});
+
+test("redacts an encrypted PEM block with metadata headers in full", () => {
+  const pem = [
+    pemMarker("BEGIN", "RSA PRIVATE KEY"),
+    "Proc-Type: 4,ENCRYPTED",
+    "DEK-Info: AES-128-CBC,0123456789ABCDEF",
+    "",
+    "MIIEow",
+    pemMarker("END", "RSA PRIVATE KEY"),
+  ].join("\n");
+  expect(redactSecrets(`<pre>${pem}</pre> after`)).toBe(`<pre>${REDACTED}</pre> after`);
 });
 
 test("leaves ordinary markup, ids and short tokens alone", () => {

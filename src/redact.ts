@@ -19,9 +19,10 @@ const SECRET_PATTERNS: readonly RegExp[] = [
   /\bsk-[A-Za-z0-9_-]{20,}\b/g, // OpenAI style secret key
   /\b[sr]k_(?:live|test)_[A-Za-z0-9]{10,}\b/g, // Stripe secret / restricted key
   /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, // JWT
-  // END marker optional: the DOM sanitizer truncates long nodes, so a key may
-  // arrive with only its header and leading material.
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----[A-Za-z0-9+/=\s…-]*?(?:-----END [A-Z ]*PRIVATE KEY-----|(?![A-Za-z0-9+/=\s…-]))/g,
+  // Prefer a full BEGIN…END block (covers encrypted keys with `Proc-Type:` /
+  // `DEK-Info:` headers). Without an END marker, which the DOM sanitizer's
+  // node truncation can remove, consume the header and any key material.
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----(?:[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----|[A-Za-z0-9+/=,:\s…-]*)/g,
 ];
 
 export function redactSecrets(text: string): string {

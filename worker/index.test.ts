@@ -191,6 +191,21 @@ test("redacts a token that straddles the DOM truncation boundary", async () => {
   expect(issue.body).not.toMatch(/AIzaSy/);
 });
 
+test("redacts a credential-shaped hostname in the issue title", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const ghToken = ["ghp", "_", "b".repeat(36)].join("");
+  await worker.fetch(post({ ...validBody, url: `https://${ghToken}/x` }), env);
+
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] [REDACTED]");
+  expect(issue.body).not.toContain(ghToken);
+});
+
 test("redacts a credential-shaped URL that is not parseable, including the title", async () => {
   let captured: unknown = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
