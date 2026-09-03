@@ -221,6 +221,18 @@ test("redacts a credential-shaped URL that is not parseable, including the title
   expect(issue.body).not.toContain(key);
 });
 
+test("rejects an absurdly large DOM without contacting GitHub", async () => {
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("{}", { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const resp = await worker.fetch(post({ ...validBody, dom: "x".repeat(2_000_001) }), env);
+  expect(resp.status).toBe(413);
+  expect(called).toBe(false);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

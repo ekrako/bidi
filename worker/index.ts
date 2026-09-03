@@ -31,6 +31,9 @@ interface ReportPayload {
 // GitHub caps issue bodies at 65536 chars; leave room for surrounding markdown.
 const MAX_DOM_CHARS = 55000;
 const MAX_DESCRIPTION_CHARS = 2000;
+// The extension sends a sanitized DOM well under this; anything larger is not
+// a real report and is not worth redacting/truncating on the Worker's CPU.
+const MAX_INPUT_DOM_CHARS = 2_000_000;
 
 function corsHeaders(env: Env): Record<string, string> {
   return {
@@ -165,6 +168,10 @@ export default {
 
     if (!isReportPayload(payload)) {
       return json({ error: "Missing required fields" }, 400, env);
+    }
+
+    if (payload.dom.length > MAX_INPUT_DOM_CHARS) {
+      return json({ error: "DOM too large" }, 413, env);
     }
 
     try {

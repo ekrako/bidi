@@ -58,6 +58,22 @@ test("redacts an encrypted PEM block with metadata headers in full", () => {
   expect(redactSecrets(`<pre>${pem}</pre> after`)).toBe(`<pre>${REDACTED}</pre> after`);
 });
 
+test("redacts a truncated PEM block followed by a complete one", () => {
+  const truncated = `${pemMarker("BEGIN")}\nMIIEvQ…`;
+  const full = `${pemMarker("BEGIN", "EC PRIVATE KEY")}\nMHcCAQ\n${pemMarker("END", "EC PRIVATE KEY")}`;
+  expect(redactSecrets(`<a>${truncated}</a><b>${full}</b>`)).toBe(
+    `<a>${REDACTED}</a><b>${REDACTED}</b>`,
+  );
+});
+
+test("stays fast on input full of stray BEGIN markers", () => {
+  const input = `${pemMarker("BEGIN")} `.repeat(20_000);
+  const started = performance.now();
+  const out = redactSecrets(input);
+  expect(performance.now() - started).toBeLessThan(2_000);
+  expect(out).not.toContain("PRIVATE KEY");
+});
+
 test("leaves ordinary markup, ids and short tokens alone", () => {
   const html =
     '<div class="AIzaShort" id="gws-plugins" data-ved="2ahUKEwj7xYGH-s-WAxVp8DQHHZCFL1AQ7LoDegQIBBAA">שלום</div>';

@@ -19,15 +19,48 @@ const SECRET_PATTERNS: readonly RegExp[] = [
   /\bsk-[A-Za-z0-9_-]{20,}\b/g, // OpenAI style secret key
   /\b[sr]k_(?:live|test)_[A-Za-z0-9]{10,}\b/g, // Stripe secret / restricted key
   /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, // JWT
-  // Prefer a full BEGIN…END block (covers encrypted keys with `Proc-Type:` /
-  // `DEK-Info:` headers). Without an END marker, which the DOM sanitizer's
-  // node truncation can remove, consume the header and any key material.
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----(?:[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----|[A-Za-z0-9+/=,:\s…-]*)/g,
 ];
+
+const PEM_BEGIN = /-----BEGIN [A-Z ]*PRIVATE KEY-----/g;
+const PEM_END = /-----END [A-Z ]*PRIVATE KEY-----/;
+// Key material plus the `…` the DOM sanitizer appends when it truncates a
+// node. Excludes `-` so it stops at the next BEGIN/END marker.
+const PEM_TRUNCATED_BODY = /^[A-Za-z0-9+/=,:\s…]*/;
+// Real key blocks are a few KB; bounding the END search keeps a page full of
+// stray BEGIN markers from turning redaction quadratic.
+const MAX_PEM_CHARS = 16_384;
+
+/**
+ * Redacts PEM private key blocks in a single forward pass.
+ *
+ * A full BEGIN…END block is consumed whole, so encrypted keys with
+ * `Proc-Type:` / `DEK-Info:` headers are covered. When the END marker is
+ * missing, typically because the DOM sanitizer truncated the node, the header
+ * and whatever key material follows it are consumed instead.
+ */
+function redactPemBlocks(text: string): string {
+  let out = "";
+  let cursor = 0;
+  for (const begin of text.matchAll(PEM_BEGIN)) {
+    const start = begin.index;
+    if (start < cursor) continue;
+    const bodyStart = start + begin[0].length;
+    const window = text.slice(bodyStart, bodyStart + MAX_PEM_CHARS);
+    const end = PEM_END.exec(window);
+    const nextBegin = window.search(PEM_BEGIN);
+    const endsThisBlock = end && (nextBegin === -1 || end.index < nextBegin);
+    const bodyLength = endsThisBlock
+      ? end.index + end[0].length
+      : (PEM_TRUNCATED_BODY.exec(window)?.[0].length ?? 0);
+    out += text.slice(cursor, start) + REDACTED;
+    cursor = bodyStart + bodyLength;
+  }
+  return out + text.slice(cursor);
+}
 
 export function redactSecrets(text: string): string {
   return SECRET_PATTERNS.reduce(
     (acc, pattern) => acc.replace(pattern, REDACTED),
-    text,
+    redactPemBlocks(text),
   );
 }
