@@ -27,6 +27,12 @@ test("redacts every occurrence and multiple token kinds", () => {
   expect(out.split(REDACTED)).toHaveLength(6);
 });
 
+test("redacts Stripe live and test keys", () => {
+  const live = ["sk_live_", "C".repeat(24)].join("");
+  const test = ["rk_test_", "D".repeat(24)].join("");
+  expect(redactSecrets(`${live} ${test}`)).toBe(`${REDACTED} ${REDACTED}`);
+});
+
 test("redacts JWTs and PEM private key blocks", () => {
   const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEow\nIBAAKC\n-----END RSA PRIVATE KEY-----";
   const out = redactSecrets(`${JWT}\n${pem}`);

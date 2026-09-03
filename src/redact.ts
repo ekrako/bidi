@@ -16,7 +16,8 @@ const SECRET_PATTERNS: readonly RegExp[] = [
   /\bgithub_pat_[A-Za-z0-9_]{22,}\b/g, // GitHub fine-grained PAT
   /\bAKIA[0-9A-Z]{16}\b/g, // AWS access key id
   /\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g, // Slack token
-  /\bsk-[A-Za-z0-9_-]{20,}\b/g, // OpenAI / Stripe style secret key
+  /\bsk-[A-Za-z0-9_-]{20,}\b/g, // OpenAI style secret key
+  /\b[sr]k_(?:live|test)_[A-Za-z0-9]{10,}\b/g, // Stripe secret / restricted key
   /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, // JWT
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
 ];

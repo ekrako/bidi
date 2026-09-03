@@ -76,11 +76,12 @@ function boundDom(dom: string): string {
 
 function buildIssueBody(p: ReportPayload): string {
   // Redact here too: reports from extension versions that predate client-side
-  // redaction still flow through this Worker.
-  const dom = redactSecrets(boundDom(p.dom));
+  // redaction still flow through this Worker. Redact before truncating, since
+  // a token cut at a truncation boundary no longer matches its pattern.
+  const dom = boundDom(redactSecrets(p.dom));
 
   const description = p.description
-    ? redactSecrets(p.description.trim().slice(0, MAX_DESCRIPTION_CHARS))
+    ? redactSecrets(p.description.trim()).slice(0, MAX_DESCRIPTION_CHARS)
     : undefined;
   const url = redactSecrets(p.url);
 

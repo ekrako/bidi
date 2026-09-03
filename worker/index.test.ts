@@ -174,6 +174,23 @@ test("redacts credential-shaped tokens from the DOM, URL and description", async
   expect(issue.body).toContain("my token is [REDACTED]");
 });
 
+test("redacts a token that straddles the DOM truncation boundary", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  // Head keeps roughly the first third of 55000 chars; place the key across it.
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  const dom = `${"x".repeat(18300)}${key}${"y".repeat(60000)}`;
+  await worker.fetch(post({ ...validBody, dom }), env);
+
+  const issue = captured as { body: string };
+  expect(issue.body).toContain("truncated");
+  expect(issue.body).not.toMatch(/AIzaSy/);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
