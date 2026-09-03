@@ -58,6 +58,11 @@ test("redacts an encrypted PEM block with metadata headers in full", () => {
   expect(redactSecrets(`<pre>${pem}</pre> after`)).toBe(`<pre>${REDACTED}</pre> after`);
 });
 
+test("redacts a truncated encrypted PEM block including its metadata headers", () => {
+  const pem = [pemMarker("BEGIN", "RSA PRIVATE KEY"), "Proc-Type: 4,ENCRYPTED", "DEK-Info: AES-128-CBC,0123", "", "MIIEow…"].join("\n");
+  expect(redactSecrets(`<pre>${pem}</pre><p>after</p>`)).toBe(`<pre>${REDACTED}</pre><p>after</p>`);
+});
+
 test("redacts a truncated PEM block followed by a complete one", () => {
   const truncated = `${pemMarker("BEGIN")}\nMIIEvQ…`;
   const full = `${pemMarker("BEGIN", "EC PRIVATE KEY")}\nMHcCAQ\n${pemMarker("END", "EC PRIVATE KEY")}`;

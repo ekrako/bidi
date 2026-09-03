@@ -23,9 +23,10 @@ const SECRET_PATTERNS: readonly RegExp[] = [
 
 const PEM_BEGIN = /-----BEGIN [A-Z ]*PRIVATE KEY-----/g;
 const PEM_END = /-----END [A-Z ]*PRIVATE KEY-----/;
-// Key material plus the `…` the DOM sanitizer appends when it truncates a
-// node. Excludes `-` so it stops at the next BEGIN/END marker.
-const PEM_TRUNCATED_BODY = /^[A-Za-z0-9+/=,:\s…]*/;
+// Where a truncated block's key material ends: the next PEM marker, or the
+// markup that follows the truncated node/attribute. PEM bodies never contain
+// these characters.
+const PEM_TRUNCATED_STOP = /-----(?:BEGIN|END) [A-Z ]*PRIVATE KEY-----|[<>"']/;
 // Real key blocks are a few KB; bounding the END search keeps a page full of
 // stray BEGIN markers from turning redaction quadratic.
 const MAX_PEM_CHARS = 16_384;
@@ -49,9 +50,12 @@ function redactPemBlocks(text: string): string {
     const end = PEM_END.exec(window);
     const nextBegin = window.search(PEM_BEGIN);
     const endsThisBlock = end && (nextBegin === -1 || end.index < nextBegin);
+    const stop = window.search(PEM_TRUNCATED_STOP);
     const bodyLength = endsThisBlock
       ? end.index + end[0].length
-      : (PEM_TRUNCATED_BODY.exec(window)?.[0].length ?? 0);
+      : stop === -1
+        ? window.length
+        : stop;
     out += text.slice(cursor, start) + REDACTED;
     cursor = bodyStart + bodyLength;
   }

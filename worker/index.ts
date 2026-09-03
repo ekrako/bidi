@@ -34,6 +34,7 @@ const MAX_DESCRIPTION_CHARS = 2000;
 // The extension sends a sanitized DOM well under this; anything larger is not
 // a real report and is not worth redacting/truncating on the Worker's CPU.
 const MAX_INPUT_DOM_CHARS = 2_000_000;
+const MAX_INPUT_DESCRIPTION_CHARS = 20_000;
 
 function corsHeaders(env: Env): Record<string, string> {
   return {
@@ -172,6 +173,10 @@ export default {
 
     if (payload.dom.length > MAX_INPUT_DOM_CHARS) {
       return json({ error: "DOM too large" }, 413, env);
+    }
+
+    if ((payload.description?.length ?? 0) > MAX_INPUT_DESCRIPTION_CHARS) {
+      return json({ error: "Description too large" }, 413, env);
     }
 
     try {
