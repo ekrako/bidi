@@ -191,6 +191,21 @@ test("redacts a token that straddles the DOM truncation boundary", async () => {
   expect(issue.body).not.toMatch(/AIzaSy/);
 });
 
+test("redacts a credential-shaped URL that is not parseable, including the title", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  await worker.fetch(post({ ...validBody, url: key }), env);
+
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] [REDACTED]");
+  expect(issue.body).not.toContain(key);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

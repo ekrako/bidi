@@ -39,6 +39,11 @@ test("redacts JWTs and PEM private key blocks", () => {
   expect(out).toBe(`${REDACTED}\n${REDACTED}`);
 });
 
+test("redacts a PEM block whose end marker was truncated away", () => {
+  const html = `<pre>-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\nBKcwggSjAgEAAoIBAQ…</pre>`;
+  expect(redactSecrets(html)).toBe(`<pre>${REDACTED}</pre>`);
+});
+
 test("leaves ordinary markup, ids and short tokens alone", () => {
   const html =
     '<div class="AIzaShort" id="gws-plugins" data-ved="2ahUKEwj7xYGH-s-WAxVp8DQHHZCFL1AQ7LoDegQIBBAA">שלום</div>';

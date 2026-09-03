@@ -110,7 +110,7 @@ async function createIssue(env: Env, p: ReportPayload): Promise<string> {
     try {
       return new URL(p.url).hostname;
     } catch {
-      return p.url;
+      return redactSecrets(p.url);
     }
   })();
 
