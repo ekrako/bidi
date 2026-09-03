@@ -53,7 +53,8 @@ test("collectDom injects into the tab and returns outerHTML", async () => {
 });
 
 test("collectDom redacts credential-shaped tokens from the captured DOM", async () => {
-  executeScriptResult = '<div data-api="AIzaSyAlpy4kDC13CDmwQCqYR7-JihW1XXz9vw8"></div>';
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  executeScriptResult = `<div data-api="${key}"></div>`;
   expect(await collectDom(1)).toBe('<div data-api="[REDACTED]"></div>');
 });
 

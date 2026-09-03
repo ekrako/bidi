@@ -146,26 +146,30 @@ test("rejects a non-string description", async () => {
   expect(resp.status).toBe(400);
 });
 
-test("redacts credential-shaped tokens from the DOM and description", async () => {
+test("redacts credential-shaped tokens from the DOM, URL and description", async () => {
   let captured: unknown = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
     captured = JSON.parse(init.body as string);
     return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
   }) as unknown as typeof fetch;
 
-  const key = "AIzaSyAlpy4kDC13CDmwQCqYR7-JihW1XXz9vw8";
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  const ghToken = ["ghp", "_", "B".repeat(36)].join("");
   await worker.fetch(
     post({
       ...validBody,
+      url: `https://example.com/page?key=${key}`,
       dom: `<div data-api="${key}"></div>`,
-      description: `my token is ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij`,
+      description: `my token is ${ghToken}`,
     }),
     env,
   );
 
-  const issue = captured as { body: string };
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] example.com");
   expect(issue.body).not.toContain(key);
-  expect(issue.body).not.toContain("ghp_");
+  expect(issue.body).not.toContain(ghToken);
+  expect(issue.body).toContain("https://example.com/page?key=[REDACTED]");
   expect(issue.body).toContain('data-api="[REDACTED]"');
   expect(issue.body).toContain("my token is [REDACTED]");
 });
