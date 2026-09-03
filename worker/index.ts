@@ -7,6 +7,8 @@
  * POST /report  { url, dom, version, userAgent, description? } -> { issueUrl }
  */
 
+import { redactSecrets } from "../src/redact";
+
 export interface Env {
   /** GitHub token with `repo`/`issues` write scope (Worker secret). */
   GITHUB_TOKEN: string;
@@ -29,6 +31,10 @@ interface ReportPayload {
 // GitHub caps issue bodies at 65536 chars; leave room for surrounding markdown.
 const MAX_DOM_CHARS = 55000;
 const MAX_DESCRIPTION_CHARS = 2000;
+// The extension sends a sanitized DOM well under this; anything larger is not
+// a real report and is not worth redacting/truncating on the Worker's CPU.
+const MAX_INPUT_DOM_CHARS = 2_000_000;
+const MAX_INPUT_DESCRIPTION_CHARS = 20_000;
 
 function corsHeaders(env: Env): Record<string, string> {
   return {
@@ -73,15 +79,21 @@ function boundDom(dom: string): string {
 }
 
 function buildIssueBody(p: ReportPayload): string {
-  const dom = boundDom(p.dom);
+  // Redact here too: reports from extension versions that predate client-side
+  // redaction still flow through this Worker. Redact before truncating, since
+  // a token cut at a truncation boundary no longer matches its pattern.
+  const dom = boundDom(redactSecrets(p.dom));
 
-  const description = p.description?.trim().slice(0, MAX_DESCRIPTION_CHARS);
+  const description = p.description
+    ? redactSecrets(p.description.trim()).slice(0, MAX_DESCRIPTION_CHARS)
+    : undefined;
+  const url = redactSecrets(p.url);
 
   return [
     "**Reported via the BiDi extension.**",
     "",
     ...(description ? ["**What's not working:**", "", description, ""] : []),
-    `- **URL:** ${p.url}`,
+    `- **URL:** ${url}`,
     `- **Extension version:** ${p.version}`,
     `- **User agent:** ${p.userAgent}`,
     "",
@@ -98,13 +110,15 @@ function buildIssueBody(p: ReportPayload): string {
 async function createIssue(env: Env, p: ReportPayload): Promise<string> {
   const owner = env.GITHUB_OWNER || "ekrako";
   const repo = env.GITHUB_REPO || "bidi";
-  const hostname = (() => {
-    try {
-      return new URL(p.url).hostname;
-    } catch {
-      return p.url;
-    }
-  })();
+  const hostname = redactSecrets(
+    (() => {
+      try {
+        return new URL(p.url).hostname;
+      } catch {
+        return p.url;
+      }
+    })(),
+  );
 
   const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
     method: "POST",
@@ -155,6 +169,14 @@ export default {
 
     if (!isReportPayload(payload)) {
       return json({ error: "Missing required fields" }, 400, env);
+    }
+
+    if (payload.dom.length > MAX_INPUT_DOM_CHARS) {
+      return json({ error: "DOM too large" }, 413, env);
+    }
+
+    if ((payload.description?.length ?? 0) > MAX_INPUT_DESCRIPTION_CHARS) {
+      return json({ error: "Description too large" }, 413, env);
     }
 
     try {
