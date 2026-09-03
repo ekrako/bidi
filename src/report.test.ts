@@ -15,12 +15,14 @@ afterAll(async () => {
 
 const originalFetch = globalThis.fetch;
 
+const DEFAULT_DOM = "<html><body>hi</body></html>";
 let executeScriptCalls: unknown[] = [];
+let executeScriptResult = DEFAULT_DOM;
 const mockChrome = {
   scripting: {
     executeScript: async (injection: unknown) => {
       executeScriptCalls.push(injection);
-      return [{ result: "<html><body>hi</body></html>" }];
+      return [{ result: executeScriptResult }];
     },
   },
 };
@@ -36,6 +38,7 @@ const payload: ReportPayload = {
 
 beforeEach(() => {
   executeScriptCalls = [];
+  executeScriptResult = DEFAULT_DOM;
 });
 
 afterEach(() => {
@@ -47,6 +50,11 @@ test("collectDom injects into the tab and returns outerHTML", async () => {
   expect(dom).toBe("<html><body>hi</body></html>");
   expect(executeScriptCalls).toHaveLength(1);
   expect((executeScriptCalls[0] as { target: { tabId: number } }).target.tabId).toBe(42);
+});
+
+test("collectDom redacts credential-shaped tokens from the captured DOM", async () => {
+  executeScriptResult = '<div data-api="AIzaSyAlpy4kDC13CDmwQCqYR7-JihW1XXz9vw8"></div>';
+  expect(await collectDom(1)).toBe('<div data-api="[REDACTED]"></div>');
 });
 
 test("grabSanitizedHtml drops script, style and media content", () => {

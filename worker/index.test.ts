@@ -146,6 +146,30 @@ test("rejects a non-string description", async () => {
   expect(resp.status).toBe(400);
 });
 
+test("redacts credential-shaped tokens from the DOM and description", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const key = "AIzaSyAlpy4kDC13CDmwQCqYR7-JihW1XXz9vw8";
+  await worker.fetch(
+    post({
+      ...validBody,
+      dom: `<div data-api="${key}"></div>`,
+      description: `my token is ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij`,
+    }),
+    env,
+  );
+
+  const issue = captured as { body: string };
+  expect(issue.body).not.toContain(key);
+  expect(issue.body).not.toContain("ghp_");
+  expect(issue.body).toContain('data-api="[REDACTED]"');
+  expect(issue.body).toContain("my token is [REDACTED]");
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

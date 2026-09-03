@@ -7,6 +7,8 @@
  * POST /report  { url, dom, version, userAgent, description? } -> { issueUrl }
  */
 
+import { redactSecrets } from "../src/redact";
+
 export interface Env {
   /** GitHub token with `repo`/`issues` write scope (Worker secret). */
   GITHUB_TOKEN: string;
@@ -73,9 +75,13 @@ function boundDom(dom: string): string {
 }
 
 function buildIssueBody(p: ReportPayload): string {
-  const dom = boundDom(p.dom);
+  // Redact here too: reports from extension versions that predate client-side
+  // redaction still flow through this Worker.
+  const dom = redactSecrets(boundDom(p.dom));
 
-  const description = p.description?.trim().slice(0, MAX_DESCRIPTION_CHARS);
+  const description = p.description
+    ? redactSecrets(p.description.trim().slice(0, MAX_DESCRIPTION_CHARS))
+    : undefined;
 
   return [
     "**Reported via the BiDi extension.**",

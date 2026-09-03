@@ -8,6 +8,8 @@
  */
 
 // Configured after deploying worker/ — see worker/README.md.
+import { redactSecrets } from "./redact";
+
 export const REPORT_ENDPOINT = "https://bidi-report.ekrako.workers.dev/report";
 
 export interface ReportPayload {
@@ -102,7 +104,7 @@ export async function collectDom(tabId: number): Promise<string> {
     target: { tabId },
     func: grabSanitizedHtml,
   });
-  return injection?.result ?? "";
+  return redactSecrets(injection?.result ?? "");
 }
 
 export async function submitReport(
