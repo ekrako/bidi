@@ -146,6 +146,108 @@ test("rejects a non-string description", async () => {
   expect(resp.status).toBe(400);
 });
 
+test("redacts credential-shaped tokens from the DOM, URL and description", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  const ghToken = ["ghp", "_", "B".repeat(36)].join("");
+  await worker.fetch(
+    post({
+      ...validBody,
+      url: `https://example.com/page?key=${key}`,
+      dom: `<div data-api="${key}"></div>`,
+      description: `my token is ${ghToken}`,
+    }),
+    env,
+  );
+
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] example.com");
+  expect(issue.body).not.toContain(key);
+  expect(issue.body).not.toContain(ghToken);
+  expect(issue.body).toContain("https://example.com/page?key=[REDACTED]");
+  expect(issue.body).toContain('data-api="[REDACTED]"');
+  expect(issue.body).toContain("my token is [REDACTED]");
+});
+
+test("redacts a token that straddles the DOM truncation boundary", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  // Head keeps roughly the first third of 55000 chars; place the key across it.
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  const dom = `${"x".repeat(18300)}${key}${"y".repeat(60000)}`;
+  await worker.fetch(post({ ...validBody, dom }), env);
+
+  const issue = captured as { body: string };
+  expect(issue.body).toContain("truncated");
+  expect(issue.body).not.toMatch(/AIzaSy/);
+});
+
+test("redacts a credential-shaped hostname in the issue title", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const ghToken = ["ghp", "_", "b".repeat(36)].join("");
+  await worker.fetch(post({ ...validBody, url: `https://${ghToken}/x` }), env);
+
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] [REDACTED]");
+  expect(issue.body).not.toContain(ghToken);
+});
+
+test("redacts a credential-shaped URL that is not parseable, including the title", async () => {
+  let captured: unknown = null;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    captured = JSON.parse(init.body as string);
+    return new Response(JSON.stringify({ html_url: "https://x/1" }), { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const key = ["AIza", "Sy", "A".repeat(33)].join("");
+  await worker.fetch(post({ ...validBody, url: key }), env);
+
+  const issue = captured as { title: string; body: string };
+  expect(issue.title).toBe("[Report] [REDACTED]");
+  expect(issue.body).not.toContain(key);
+});
+
+test("rejects an absurdly large DOM without contacting GitHub", async () => {
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("{}", { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const resp = await worker.fetch(post({ ...validBody, dom: "x".repeat(2_000_001) }), env);
+  expect(resp.status).toBe(413);
+  expect(called).toBe(false);
+});
+
+test("rejects an absurdly large description without contacting GitHub", async () => {
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("{}", { status: 201 });
+  }) as unknown as typeof fetch;
+
+  const resp = await worker.fetch(
+    post({ ...validBody, description: "x".repeat(20_001) }),
+    env,
+  );
+  expect(resp.status).toBe(413);
+  expect(called).toBe(false);
+});
+
 test("truncates very large DOM", async () => {
   let issue: { body: string } | null = null;
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

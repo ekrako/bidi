@@ -52,10 +52,12 @@ declare const chrome: {
     };
   };
   scripting: {
-    executeScript<T>(injection: {
+    executeScript<T, Args extends unknown[] = []>(injection: {
       target: { tabId: number };
       files?: string[];
-      func?: () => T;
+      func?: (...args: Args) => T;
+      /** JSON-serializable arguments forwarded to `func`. */
+      args?: Args;
     }): Promise<Array<{ result: T }>>;
   };
   action: {
